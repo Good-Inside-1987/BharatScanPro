@@ -270,6 +270,18 @@ function cleanupOldIntradayRows(): void {
   }
 }
 
+// ── Invalid-symbol persistence ────────────────────────────────────────────────
+
+/**
+ * Mark a plain NSE symbol as permanently invalid in Fyers so future EOD runs
+ * skip it without spending a broker request.  Safe to call multiple times.
+ */
+function markFyersInvalid(symbol: string): void {
+  marketDb
+    .prepare(`UPDATE symbols SET fyers_eod_invalid = 1 WHERE symbol = ?`)
+    .run(symbol);
+}
+
 // ── Shared symbol loop ──────────────────────────────────────────────────────
 
 interface SymbolRow { symbol: string }
@@ -362,7 +374,9 @@ async function runSymbolLoop(
   symbols: string[],
   resolution: string,
   date: string,
-  alreadyCovered: (symbol: string) => boolean
+  alreadyCovered: (symbol: string) => boolean,
+  /** Called once per symbol permanently rejected by the broker. */
+  onInvalidSymbol?: (symbol: string) => void
 ): Promise<JobStats> {
   const stats: JobStats = {
     completed: 0, noData: 0, invalidSymbol: 0, skippedBudget: 0, failed: 0,
@@ -421,6 +435,7 @@ async function runSymbolLoop(
         // Permanent rejection — collect silently; summary logged after the loop.
         stats.invalidSymbol++;
         collectSample(invalidSamples, symbol, err.message);
+        onInvalidSymbol?.(symbol);
         continue;
       }
       // Transient / unexpected broker error.
@@ -500,13 +515,28 @@ export async function runEodSyncJob(
 
     const sql =
       config.eodUniverse === "fo_stocks"
-        ? `SELECT symbol FROM symbols WHERE is_delisted = 0 AND is_fo_eligible = 1`
-        : `SELECT symbol FROM symbols WHERE is_delisted = 0`;
+        ? `SELECT symbol FROM symbols WHERE is_delisted = 0 AND is_fo_eligible = 1 AND fyers_eod_invalid = 0`
+        : `SELECT symbol FROM symbols WHERE is_delisted = 0 AND fyers_eod_invalid = 0`;
     const symbolRows = marketDb.prepare(sql).all() as unknown as SymbolRow[];
     const symbols = symbolRows.map((r) => r.symbol);
 
-    console.log(`[syncJobs] EOD sync starting — ${symbols.length} symbols for ${date} (universe: ${config.eodUniverse})`);
-    const stats = await runSymbolLoop(symbols, "1D", date, (s) => isEodCovered(s, date));
+    // Count how many symbols are being skipped because they were previously
+    // rejected by Fyers, so the log makes the exclusion visible.
+    const invalidCount = (marketDb
+      .prepare(
+        config.eodUniverse === "fo_stocks"
+          ? `SELECT COUNT(*) AS n FROM symbols WHERE is_delisted = 0 AND is_fo_eligible = 1 AND fyers_eod_invalid = 1`
+          : `SELECT COUNT(*) AS n FROM symbols WHERE is_delisted = 0 AND fyers_eod_invalid = 1`
+      )
+      .get() as unknown as { n: number }).n;
+
+    console.log(
+      `[syncJobs] EOD sync starting — ${symbols.length} symbols for ${date}` +
+      ` (universe: ${config.eodUniverse}` +
+      (invalidCount > 0 ? `, ${invalidCount} known-invalid excluded` : "") +
+      ")"
+    );
+    const stats = await runSymbolLoop(symbols, "1D", date, (s) => isEodCovered(s, date), markFyersInvalid);
 
     // ── Index daily bars ─────────────────────────────────────────────────────
     // These 5 symbols mirror ALL_INDEX_DEFS[*].fyersIndexSymbol in

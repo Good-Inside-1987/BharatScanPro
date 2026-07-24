@@ -212,4 +212,19 @@ export function initMarketDb(db: DatabaseSync): void {
   try {
     db.exec(`ALTER TABLE symbols ADD COLUMN fyers_symbol TEXT`);
   } catch { /* column already exists */ }
+
+  // Flag symbols that Fyers permanently rejects for historical data so nightly
+  // EOD sync skips them instead of burning request budget on every run.
+  // Set via syncJobs when an InvalidSymbolError is returned by the broker.
+  try {
+    db.exec(
+      `ALTER TABLE symbols ADD COLUMN fyers_eod_invalid INTEGER NOT NULL DEFAULT 0`
+    );
+  } catch { /* column already exists */ }
+  try {
+    db.exec(
+      `CREATE INDEX IF NOT EXISTS idx_symbols_fyers_eod_invalid
+         ON symbols(fyers_eod_invalid) WHERE fyers_eod_invalid = 1`
+    );
+  } catch { /* index already exists */ }
 }
