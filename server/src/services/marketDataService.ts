@@ -584,20 +584,35 @@ async function runWorker(): Promise<void> {
             task.symbol, task.resolution, task.from, task.to
           );
           upsertBars(task.symbol, task.resolution, bars);
-          updateProgress(task.symbol, task.resolution, task.from, task.to);
+          // Only mark covered when bars were actually received — same rule as
+          // the inline fetch path. A 0-bar reply leaves the gap open so the
+          // next request can retry rather than permanently serving empty data.
+          if (bars.length > 0) {
+            updateProgress(task.symbol, task.resolution, task.from, task.to);
+          }
           console.log(
             "[marketDataService] ✓ backfill %s %s %s→%s  (%d bars)",
             task.symbol, task.resolution, task.from, task.to, bars.length
           );
         });
       } catch (err) {
-        // Log but do not re-queue to prevent runaway loops on persistent errors.
-        // The gap will remain in backfill_progress and be retried on next call.
-        console.error(
-          "[marketDataService] Chunk failed %s %s %s→%s: %s",
-          task.symbol, task.resolution, task.from, task.to,
-          err instanceof Error ? err.message : String(err)
-        );
+        // Invalid symbol is a permanent per-symbol condition — log at warn and
+        // skip. The gap is intentionally left uncovered so the symbol can be
+        // excluded by higher-level logic (Change #5) rather than wasting budget
+        // on permanent retries. All other errors are transient; log at error
+        // level and leave the gap open for the next backfill attempt.
+        if (err instanceof InvalidSymbolError) {
+          console.warn(
+            "[marketDataService] Invalid symbol — skipping backfill chunk %s %s %s→%s: %s",
+            task.symbol, task.resolution, task.from, task.to, err.message
+          );
+        } else {
+          console.error(
+            "[marketDataService] Chunk failed %s %s %s→%s: %s",
+            task.symbol, task.resolution, task.from, task.to,
+            err instanceof Error ? err.message : String(err)
+          );
+        }
       }
     }
   } finally {
@@ -660,7 +675,14 @@ export async function getHistoricalBars(
             symbol, resolution, first.from, first.to
           );
           upsertBars(symbol, resolution, bars);
-          updateProgress(symbol, resolution, first.from, first.to);
+          // Only mark the range as covered when the broker actually returned
+          // bars. A 0-bar response means the data is genuinely absent for that
+          // window (e.g. a mid-session request before market close, or a
+          // transient empty reply). Marking it covered would prevent any future
+          // retry, causing the API to permanently serve an empty DB result.
+          if (bars.length > 0) {
+            updateProgress(symbol, resolution, first.from, first.to);
+          }
           console.log(
             "[marketDataService] ✓ inline fetch %s %s %s→%s  (%d bars)",
             symbol, resolution, first.from, first.to, bars.length
@@ -671,7 +693,8 @@ export async function getHistoricalBars(
             err instanceof AuthenticationError ||
             err instanceof SessionExpiredError ||
             err instanceof RateLimitError ||
-            err instanceof BrokerUnavailableError
+            err instanceof BrokerUnavailableError ||
+            err instanceof InvalidSymbolError
           ) throw err;
           // Generic adapter error → classify into a typed error and throw.
           classifyAdapterError(err);
