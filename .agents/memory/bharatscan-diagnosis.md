@@ -38,7 +38,7 @@ description: Findings from deep Electron/Fyers diagnosis session; what works, wh
 1. ✅ Fyers REST error preservation — DONE (previous session added structured `details` to error responses)
 2. ✅ INVALID_SYMBOL classification — new `InvalidSymbolError` class (code: INVALID_SYMBOL, HTTP 422); `classifyAdapterError` detects "Invalid symbol provided" pattern; syncJobs logs at warn+continue instead of error; route returns 422
 3. ✅ Fix empty-result / backfill coverage behavior — `updateProgress` now only called when `bars.length > 0` in both inline fetch and background worker; `InvalidSymbolError` added to re-throw list in inline path; background worker logs invalid-symbol chunks at warn+skip
-4. ⬜ Improve EOD sync summaries (log representative failures, not thousands of blank lines)
+4. ✅ Improve EOD sync summaries — JobStats expanded (noData/invalidSymbol/failed/skippedBudget); runSymbolLoop collects samples silently, emits one structured end-of-loop block; transient errors capped at 10 inline lines; finishSyncLog writes breakdown into error_message; done-logs show all 5 counters
 5. ⬜ Invalid-symbol persistence and skipping (exclude from future EOD runs)
 6. ⬜ Resumable historical backfill job
 7. ⬜ Database-backed universe categories (persist CSV import to SQLite)

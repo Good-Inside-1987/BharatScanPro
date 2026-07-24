@@ -151,9 +151,27 @@ export function hasSuccessfulRunForDate(jobName: string, date: string): boolean 
 export function finishSyncLog(
   id: number,
   status: "completed" | "failed",
-  stats: { completed: number; skippedBudget: number; failed: number },
+  stats: JobStats | { completed: number; skippedBudget: number; failed: number },
   errorMessage?: string
 ): void {
+  // Build a structured breakdown for error_message when there are non-fatal
+  // categories (invalidSymbol / noData) — gives the DB record diagnostic value
+  // without requiring a schema change for every new counter.
+  const full = stats as JobStats;
+  const parts: string[] = [];
+  if (full.invalidSymbol) parts.push(`invalidSymbol=${full.invalidSymbol}`);
+  if (full.noData)        parts.push(`noData=${full.noData}`);
+  if (full.failed)        parts.push(`failed=${full.failed}`);
+
+  let finalMessage: string | null;
+  if (errorMessage) {
+    finalMessage = parts.length ? `${errorMessage} | ${parts.join(" ")}` : errorMessage;
+  } else if (parts.length) {
+    finalMessage = parts.join(" ");
+  } else {
+    finalMessage = null;
+  }
+
   marketDb
     .prepare(
       `UPDATE sync_log
@@ -168,8 +186,10 @@ export function finishSyncLog(
       stats.completed,
       stats.completed,
       stats.skippedBudget,
-      stats.failed,
-      errorMessage ?? null,
+      // symbols_failed column stores all non-completed outcomes so the DB
+      // total is still meaningful; the breakdown is in error_message.
+      (full.failed ?? 0) + (full.invalidSymbol ?? 0) + (full.noData ?? 0),
+      finalMessage,
       id
     );
 }
@@ -254,7 +274,33 @@ function cleanupOldIntradayRows(): void {
 
 interface SymbolRow { symbol: string }
 
-interface JobStats { completed: number; skippedBudget: number; failed: number }
+interface JobStats {
+  /** Symbols where the broker returned ≥1 bar and rows were saved. */
+  completed: number;
+  /** Valid symbol but broker returned 0 bars (non-trading day, mid-session gap). */
+  noData: number;
+  /** Permanently rejected by the broker — unknown/delisted symbol. */
+  invalidSymbol: number;
+  /** Not reached because the daily request budget was exhausted. */
+  skippedBudget: number;
+  /** Transient/unexpected broker errors (network, overload, etc.). */
+  failed: number;
+}
+
+/** Up to MAX_SAMPLES representative examples collected per failure category. */
+const MAX_SAMPLES = 5;
+/** Log transient failures individually up to this limit; summarise the rest. */
+const MAX_PER_SYMBOL_LOGS = 10;
+
+interface FailureSample { symbol: string; message: string }
+
+function collectSample(
+  bucket: FailureSample[],
+  symbol: string,
+  message: string
+): void {
+  if (bucket.length < MAX_SAMPLES) bucket.push({ symbol, message });
+}
 
 // Fyers returns an HTML page instead of JSON when it's rate-limiting a
 // request on an otherwise-valid session — already normalized by fyers.ts's
@@ -318,8 +364,22 @@ async function runSymbolLoop(
   date: string,
   alreadyCovered: (symbol: string) => boolean
 ): Promise<JobStats> {
-  const stats: JobStats = { completed: 0, skippedBudget: 0, failed: 0 };
+  const stats: JobStats = {
+    completed: 0, noData: 0, invalidSymbol: 0, skippedBudget: 0, failed: 0,
+  };
   let budgetExhausted = false;
+
+  // Per-category sample buckets — populated silently during the loop and
+  // emitted once as a structured summary at the end. This avoids thousands
+  // of per-symbol log lines when large numbers of symbols share the same
+  // root cause (e.g. all being invalid Fyers symbols).
+  const invalidSamples: FailureSample[] = [];
+  const noDataSamples:  FailureSample[] = [];
+  const failedSamples:  FailureSample[] = [];
+
+  // Transient failures are also logged inline, but only up to a cap so the
+  // output stays readable even when many symbols hit the same transient error.
+  let inlineFailedLogged = 0;
 
   for (const symbol of symbols) {
     if (alreadyCovered(symbol)) {
@@ -344,13 +404,12 @@ async function runSymbolLoop(
       if (bars.length > 0) {
         stats.completed++;
       } else {
-        // No candle for this date (e.g. symbol didn't trade) — not a failure,
-        // but not "completed" data either. Count it alongside failed for
-        // visibility without inflating the completed count.
-        stats.failed++;
+        // Valid symbol; broker returned 0 bars for this date (non-trading
+        // day, mid-session gap, or symbol temporarily absent). Not a failure.
+        stats.noData++;
+        collectSample(noDataSamples, symbol, "0 bars");
       }
     } catch (err) {
-      stats.failed++;
       if (err instanceof AuthenticationError || err instanceof SessionExpiredError) {
         console.error(
           "[syncJobs] Broker session unavailable mid-job (%s) — stopping cleanly",
@@ -359,20 +418,46 @@ async function runSymbolLoop(
         break;
       }
       if (err instanceof InvalidSymbolError) {
-        // Permanent rejection — Fyers does not recognise this symbol.
-        // Log once at warn level (not error) so it's visible but not alarming.
-        console.warn(
-          "[syncJobs] Invalid symbol skipped — %s @ %s: %s",
-          symbol, date, err.message
-        );
+        // Permanent rejection — collect silently; summary logged after the loop.
+        stats.invalidSymbol++;
+        collectSample(invalidSamples, symbol, err.message);
         continue;
       }
-      console.error(
-        "[syncJobs] Failed to sync %s @ %s: %s",
-        symbol, date, err instanceof Error ? err.message : String(err)
-      );
+      // Transient / unexpected broker error.
+      stats.failed++;
+      const msg = err instanceof Error ? err.message : String(err);
+      collectSample(failedSamples, symbol, msg);
+      if (inlineFailedLogged < MAX_PER_SYMBOL_LOGS) {
+        console.error("[syncJobs] Failed to sync %s @ %s: %s", symbol, date, msg);
+        inlineFailedLogged++;
+      } else if (inlineFailedLogged === MAX_PER_SYMBOL_LOGS) {
+        console.error(
+          "[syncJobs] … further per-symbol failure lines suppressed; see end-of-loop summary"
+        );
+        inlineFailedLogged++;
+      }
     }
   }
+
+  // ── End-of-loop structured summary ─────────────────────────────────────────
+  // Always emit so operators have one canonical place to check after each job.
+  console.log(
+    "[syncJobs] Loop summary — completed=%d noData=%d invalidSymbol=%d failed=%d skippedBudget=%d",
+    stats.completed, stats.noData, stats.invalidSymbol, stats.failed, stats.skippedBudget
+  );
+
+  function logSamples(label: string, count: number, samples: FailureSample[]): void {
+    if (count === 0) return;
+    const examples = samples
+      .map((s) => `${s.symbol}(${s.message})`)
+      .join(", ");
+    const overflow = count > samples.length ? ` … +${count - samples.length} more` : "";
+    console.log("[syncJobs]   %s: %d — e.g. %s%s", label, count, examples, overflow);
+  }
+
+  logSamples("invalidSymbol", stats.invalidSymbol, invalidSamples);
+  logSamples("noData",        stats.noData,        noDataSamples);
+  logSamples("failed",        stats.failed,        failedSamples);
 
   return stats;
 }
@@ -401,7 +486,7 @@ export async function runEodSyncJob(
     if (!isTradingDay(date)) {
       console.log("[syncJobs] %s is not a trading day — skipping EOD sync, 0 budget spent", date);
       finishSyncLog(logId, "completed", { completed: 0, skippedBudget: 0, failed: 0 });
-      return { completed: 0, skippedBudget: 0, failed: 0 };
+      return { completed: 0, noData: 0, invalidSymbol: 0, skippedBudget: 0, failed: 0 };
     }
 
     refreshFyersSymbolMap();
@@ -410,7 +495,7 @@ export async function runEodSyncJob(
     if (!adapter) {
       console.warn("[syncJobs] EOD sync skipped — no broker connected");
       finishSyncLog(logId, "failed", { completed: 0, skippedBudget: 0, failed: 0 }, "No broker connected");
-      return { completed: 0, skippedBudget: 0, failed: 0, skippedNoAdapter: true };
+      return { completed: 0, noData: 0, invalidSymbol: 0, skippedBudget: 0, failed: 0, skippedNoAdapter: true };
     }
 
     const sql =
@@ -451,16 +536,14 @@ export async function runEodSyncJob(
 
     // Retention cleanup is handled centrally by cleanupJob.ts (6 PM IST).
 
+    // Only true transient broker errors count as a job failure — invalid
+    // symbols and no-data days are expected and handled; they do not mean
+    // the broker connection itself is broken.
     const runStatus: "completed" | "failed" = stats.failed === 0 ? "completed" : "failed";
-    finishSyncLog(
-      logId,
-      runStatus,
-      stats,
-      runStatus === "failed" ? `${stats.failed} of ${symbols.length} symbols failed` : undefined
-    );
+    finishSyncLog(logId, runStatus, stats);
     console.log(
-      "[syncJobs] EOD sync done — status=%s completed=%d skippedBudget=%d failed=%d",
-      runStatus, stats.completed, stats.skippedBudget, stats.failed
+      "[syncJobs] EOD sync done — status=%s completed=%d noData=%d invalidSymbol=%d failed=%d skippedBudget=%d",
+      runStatus, stats.completed, stats.noData, stats.invalidSymbol, stats.failed, stats.skippedBudget
     );
     return stats;
   } catch (err) {
@@ -506,7 +589,7 @@ export async function runIntradaySyncJob(
     if (!isTradingDay(date)) {
       console.log("[syncJobs] %s is not a trading day — skipping intraday sync, 0 budget spent", date);
       finishSyncLog(logId, "completed", { completed: 0, skippedBudget: 0, failed: 0 });
-      return { completed: 0, skippedBudget: 0, failed: 0 };
+      return { completed: 0, noData: 0, invalidSymbol: 0, skippedBudget: 0, failed: 0 };
     }
 
     refreshFyersSymbolMap();
@@ -515,7 +598,7 @@ export async function runIntradaySyncJob(
     if (!adapter) {
       console.warn("[syncJobs] Intraday sync skipped — no broker connected");
       finishSyncLog(logId, "failed", { completed: 0, skippedBudget: 0, failed: 0 }, "No broker connected");
-      return { completed: 0, skippedBudget: 0, failed: 0, skippedNoAdapter: true };
+      return { completed: 0, noData: 0, invalidSymbol: 0, skippedBudget: 0, failed: 0, skippedNoAdapter: true };
     }
 
     const sql =
@@ -535,15 +618,10 @@ export async function runIntradaySyncJob(
     // Retention cleanup is handled centrally by cleanupJob.ts (6 PM IST).
 
     const runStatus: "completed" | "failed" = stats.failed === 0 ? "completed" : "failed";
-    finishSyncLog(
-      logId,
-      runStatus,
-      stats,
-      runStatus === "failed" ? `${stats.failed} of ${symbols.length} symbols failed` : undefined
-    );
+    finishSyncLog(logId, runStatus, stats);
     console.log(
-      "[syncJobs] Intraday sync done — status=%s completed=%d skippedBudget=%d failed=%d",
-      runStatus, stats.completed, stats.skippedBudget, stats.failed
+      "[syncJobs] Intraday sync done — status=%s completed=%d noData=%d invalidSymbol=%d failed=%d skippedBudget=%d",
+      runStatus, stats.completed, stats.noData, stats.invalidSymbol, stats.failed, stats.skippedBudget
     );
     return stats;
   } catch (err) {
