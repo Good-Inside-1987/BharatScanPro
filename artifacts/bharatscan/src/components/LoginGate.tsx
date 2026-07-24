@@ -39,19 +39,40 @@ async function attemptLogin(key: string): Promise<{ ok: boolean; error?: string 
 
 async function checkAuth(): Promise<boolean> {
   const token = getStoredToken();
-  if (!token) return false;
-  // Verify the stored token against a real auth-gated endpoint rather than
-  // /api/health (which is exempt from auth and always returns 200).
-  try {
-    const res = await fetch("/api/auth/verify", {
-      credentials: "include",
-      headers: { "Authorization": `Bearer ${token}` },
-    });
-    if (!res.ok) { clearToken(); return false; }
-    return true;
-  } catch {
-    return false;
+  if (token) {
+    // Verify the stored token against a real auth-gated endpoint rather than
+    // /api/health (which is exempt from auth and always returns 200).
+    try {
+      const res = await fetch("/api/auth/verify", {
+        credentials: "include",
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      if (res.ok) return true;
+      clearToken();
+    } catch {
+      return false;
+    }
   }
+
+  // API_KEY is optional in development. Probe the login endpoint with an
+  // empty key so the UI matches the server's open-auth configuration instead
+  // of showing an unlock form that can never be submitted.
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (data.token) storeToken(data.token);
+      return true;
+    }
+  } catch {
+    // Keep the login form visible when the backend cannot be reached.
+  }
+  return false;
 }
 
 export function LoginGate({ children }: { children: React.ReactNode }) {
