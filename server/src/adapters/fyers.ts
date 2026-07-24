@@ -6,6 +6,7 @@ import type {
   OptionChainData,
   Quote,
 } from "./types.js";
+import { FyersApiError, type BrokerErrorDetails } from "../errors/brokerErrors.js";
 
 const FYERS_DATA_BASE = "https://api-t1.fyers.in/data";
 
@@ -42,6 +43,37 @@ function addDays(date: Date, days: number): Date {
 
 function toDateString(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+function sanitizeResponseBody(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sanitizeResponseBody);
+  if (!value || typeof value !== "object") return value;
+
+  const sensitiveKeys = new Set([
+    "access_token",
+    "refresh_token",
+    "token",
+    "auth_code",
+    "authorization",
+    "client_secret",
+    "secret",
+  ]);
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [
+      key,
+      sensitiveKeys.has(key.toLowerCase()) ? "[REDACTED]" : sanitizeResponseBody(entry),
+    ])
+  );
+}
+
+function responsePreview(text: string): unknown {
+  const trimmed = text.trim();
+  if (!trimmed) return undefined;
+  try {
+    return sanitizeResponseBody(JSON.parse(trimmed));
+  } catch {
+    return trimmed.slice(0, 2_000);
+  }
 }
 
 /**
@@ -96,20 +128,77 @@ export class FyersAdapter implements BrokerAdapter {
     return `${this.appId}:${this.accessToken}`;
   }
 
-  /** Fetch a URL and parse the response as JSON, detecting HTML rate-limit
-   *  pages before attempting JSON.parse() so callers get a clear error
-   *  instead of "Unexpected token '<'". */
-  private async fetchJson<T>(url: string | URL, init?: RequestInit): Promise<T> {
-    const response = await fetch(url, init);
+  /**
+   * Fetch a URL and parse the response as JSON.
+   *
+   * Fyers commonly returns HTTP 200 with {s:"error", message:"..."} for
+   * rejected requests, so both transport-level and broker-level context are
+   * captured here. Authentication headers and request bodies are deliberately
+   * excluded from the diagnostic payload.
+   */
+  private async fetchJson<T>(
+    url: string | URL,
+    init?: RequestInit,
+    context: Pick<BrokerErrorDetails, "operation" | "request"> = {}
+  ): Promise<T> {
+    let response: Response;
+    try {
+      response = await fetch(url, init);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new FyersApiError(
+        {
+          provider: "fyers",
+          operation: context.operation,
+          request: context.request,
+        },
+        `Fyers ${context.operation ?? "REST"} request failed: ${message}`
+      );
+    }
     const contentType = response.headers.get("content-type") ?? "";
-    if (contentType.includes("text/html")) {
-      throw new Error("Rate limited by Fyers (received HTML instead of JSON)");
-    }
     const text = await response.text();
-    if (text.trimStart().startsWith("<")) {
-      throw new Error("Rate limited by Fyers (received HTML instead of JSON)");
+    const body = responsePreview(text);
+    const baseDetails: BrokerErrorDetails = {
+      provider: "fyers",
+      operation: context.operation,
+      httpStatus: response.status,
+      request: context.request,
+      responseBody: body,
+    };
+
+    if (contentType.includes("text/html") || text.trimStart().startsWith("<")) {
+      throw new FyersApiError(
+        {
+          ...baseDetails,
+          brokerMessage: response.status === 429
+            ? "Rate limited by Fyers (received HTML instead of JSON)"
+            : "Fyers returned an HTML response instead of JSON",
+        },
+        response.status === 429
+          ? "Rate limited by Fyers (received HTML instead of JSON)"
+          : `Fyers returned an HTML response instead of JSON (HTTP ${response.status})`
+      );
     }
-    return JSON.parse(text) as T;
+
+    if (!response.ok) {
+      const brokerMessage =
+        body && typeof body === "object" && "message" in body
+          ? String((body as { message?: unknown }).message ?? "")
+          : undefined;
+      throw new FyersApiError({ ...baseDetails, brokerMessage });
+    }
+
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      throw new FyersApiError(
+        {
+          ...baseDetails,
+          brokerMessage: "Fyers returned malformed JSON",
+        },
+        `Fyers returned malformed JSON (HTTP ${response.status})`
+      );
+    }
   }
 
   /**
@@ -139,10 +228,17 @@ export class FyersAdapter implements BrokerAdapter {
         appIdHash,
         code: totpCode,
       }),
-    });
+    }, { operation: "login" });
 
     if (data.s !== "ok" || !data.access_token) {
-      throw new Error(data.message ?? "Fyers authentication failed");
+      throw new FyersApiError({
+        provider: "fyers",
+        operation: "login",
+        httpStatus: 200,
+        brokerStatus: data.s,
+        brokerMessage: data.message,
+        responseBody: sanitizeResponseBody(data),
+      });
     }
 
     return data.access_token;
@@ -172,10 +268,31 @@ export class FyersAdapter implements BrokerAdapter {
         candles?: number[][];
       }>(url.toString(), {
         headers: { Authorization: this.authHeader() },
+      }, {
+        operation: "history",
+        request: {
+          symbol,
+          resolution,
+          rangeFrom: chunk.from,
+          rangeTo: chunk.to,
+        },
       });
 
       if (data.s !== "ok") {
-        throw new Error(data.message ?? "Fyers history request failed");
+        throw new FyersApiError({
+          provider: "fyers",
+          operation: "history",
+          httpStatus: 200,
+          brokerStatus: data.s,
+          brokerMessage: data.message,
+          request: {
+            symbol,
+            resolution,
+            rangeFrom: chunk.from,
+            rangeTo: chunk.to,
+          },
+          responseBody: sanitizeResponseBody(data),
+        });
       }
 
       for (const candle of data.candles ?? []) {
@@ -219,10 +336,21 @@ export class FyersAdapter implements BrokerAdapter {
       }>;
     }>(url.toString(), {
       headers: { Authorization: this.authHeader() },
+    }, {
+      operation: "quotes",
+      request: { symbols },
     });
 
     if (data.s !== "ok") {
-      throw new Error(data.message ?? "Fyers quotes request failed");
+      throw new FyersApiError({
+        provider: "fyers",
+        operation: "quotes",
+        httpStatus: 200,
+        brokerStatus: data.s,
+        brokerMessage: data.message,
+        request: { symbols },
+        responseBody: sanitizeResponseBody(data),
+      });
     }
 
     return (data.d ?? []).map((entry) => ({
@@ -266,10 +394,21 @@ export class FyersAdapter implements BrokerAdapter {
       };
     }>(url.toString(), {
       headers: { Authorization: this.authHeader() },
+    }, {
+      operation: "options-chain",
+      request: { underlying, expiry },
     });
 
     if (data.s !== "ok") {
-      throw new Error(data.message ?? "Fyers option chain request failed");
+      throw new FyersApiError({
+        provider: "fyers",
+        operation: "options-chain",
+        httpStatus: 200,
+        brokerStatus: data.s,
+        brokerMessage: data.message,
+        request: { underlying, expiry },
+        responseBody: sanitizeResponseBody(data),
+      });
     }
 
     // Extract available expiry dates from the response meta

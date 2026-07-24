@@ -51,7 +51,12 @@ function handleBrokerError(err: unknown, res: Response, context: string): boolea
     // BharatScan API key is invalid, fire auth:unauthorized, clear the
     // localStorage token, and send the user back to the LoginGate — even
     // though they are perfectly authenticated to this server.
-    res.status(503).json({ error: err.message, code: err.code, broker_error: true });
+    res.status(503).json({
+      error: err.message,
+      code: err.code,
+      broker_error: true,
+      details: err.details,
+    });
     return true;
   }
   if (err instanceof AuthenticationError) {
@@ -65,12 +70,13 @@ function handleBrokerError(err: unknown, res: Response, context: string): boolea
       error: err.message,
       code: err.code,
       retryAfterMs: err.retryAfterMs,
+      details: err.details,
     });
     return true;
   }
   if (err instanceof BrokerUnavailableError) {
     console.warn("[marketData] %s — broker unavailable: %s", context, err.message);
-    res.status(503).json({ error: err.message, code: err.code });
+    res.status(503).json({ error: err.message, code: err.code, details: err.details });
     return true;
   }
   return false;

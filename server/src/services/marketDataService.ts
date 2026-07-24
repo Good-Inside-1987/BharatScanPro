@@ -29,9 +29,11 @@ import { decrypt } from "../lib/encryption.js";
 import { config } from "../config/environment.js";
 import {
   AuthenticationError,
+  FyersApiError,
   SessionExpiredError,
   RateLimitError,
   BrokerUnavailableError,
+  type BrokerErrorDetails,
 } from "../errors/brokerErrors.js";
 import { getLiveQuote, subscribeSymbols } from "./liveFeedService.js";
 
@@ -171,21 +173,25 @@ function markSessionExpired(): void {
 
 export function classifyAdapterError(err: unknown): never {
   const message = err instanceof Error ? err.message : String(err);
+  const details: BrokerErrorDetails | undefined =
+    err instanceof FyersApiError ? err.details : undefined;
 
   const isNetwork =
     err instanceof TypeError ||
     /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|fetch failed|network error/i.test(message);
-  if (isNetwork) throw new BrokerUnavailableError();
+  if (isNetwork) throw new BrokerUnavailableError(message, details);
 
-  if (/rate.?limit|too.?many.?request|429/i.test(message)) throw new RateLimitError(message);
+  if (/rate.?limit|too.?many.?request|429/i.test(message)) {
+    throw new RateLimitError(message, 60_000, details);
+  }
 
   if (/not configured|session|expired|unauthori[sz]|invalid.?(token|key|credentials)|please provide valid|forbidden|could not authenticate/i.test(message)) {
     markSessionExpired();
-    throw new SessionExpiredError(message);
+    throw new SessionExpiredError(message, details);
   }
 
   // Treat anything else as a generic broker unavailability (preserves old 503 behaviour)
-  throw new BrokerUnavailableError(message);
+  throw new BrokerUnavailableError(message, details);
 }
 
 // ── Auth state helper ──────────────────────────────────────────────────────────
