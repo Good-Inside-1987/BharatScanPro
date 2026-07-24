@@ -33,6 +33,7 @@ import {
   SessionExpiredError,
   RateLimitError,
   BrokerUnavailableError,
+  InvalidSymbolError,
   type BrokerErrorDetails,
 } from "../errors/brokerErrors.js";
 import { getLiveQuote, subscribeSymbols } from "./liveFeedService.js";
@@ -188,6 +189,12 @@ export function classifyAdapterError(err: unknown): never {
   if (/not configured|session|expired|unauthori[sz]|invalid.?(token|key|credentials)|please provide valid|forbidden|could not authenticate/i.test(message)) {
     markSessionExpired();
     throw new SessionExpiredError(message, details);
+  }
+
+  // Permanent per-symbol rejection — not a transient broker outage.
+  // Fyers returns {"s":"error","message":"Invalid symbol provided"} for unknown/delisted symbols.
+  if (/invalid.?symbol|symbol.?not.?found|no.?data.?found.?for.?symbol|symbol.?does.?not.?exist/i.test(message)) {
+    throw new InvalidSymbolError(message, details);
   }
 
   // Treat anything else as a generic broker unavailability (preserves old 503 behaviour)

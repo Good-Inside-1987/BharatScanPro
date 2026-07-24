@@ -19,7 +19,7 @@
 import { marketDb } from "../db.js";
 import { config } from "../config/environment.js";
 import { getHistoricalBars, getAuthenticatedAdapter, getServiceStats } from "./marketDataService.js";
-import { AuthenticationError, SessionExpiredError } from "../errors/brokerErrors.js";
+import { AuthenticationError, SessionExpiredError, InvalidSymbolError } from "../errors/brokerErrors.js";
 import { isTradingDay } from "./tradingCalendar.js";
 
 // ── Fyers symbol helper (same convention as dataLoader.ts's toFyersSymbol) ────
@@ -357,6 +357,15 @@ async function runSymbolLoop(
           err.message
         );
         break;
+      }
+      if (err instanceof InvalidSymbolError) {
+        // Permanent rejection — Fyers does not recognise this symbol.
+        // Log once at warn level (not error) so it's visible but not alarming.
+        console.warn(
+          "[syncJobs] Invalid symbol skipped — %s @ %s: %s",
+          symbol, date, err.message
+        );
+        continue;
       }
       console.error(
         "[syncJobs] Failed to sync %s @ %s: %s",

@@ -89,3 +89,21 @@ export class BrokerUnavailableError extends Error {
     this.details = details;
   }
 }
+
+/**
+ * The broker rejected the symbol as unknown/invalid/delisted.
+ * Unlike BrokerUnavailableError this is a permanent per-symbol condition —
+ * the sync loop should record it and skip that symbol on future runs.
+ */
+export class InvalidSymbolError extends Error {
+  readonly code = "INVALID_SYMBOL" as const;
+  readonly details?: BrokerErrorDetails;
+  constructor(
+    message = "Symbol is not recognised by the broker.",
+    details?: BrokerErrorDetails
+  ) {
+    super(message);
+    this.name = "InvalidSymbolError";
+    this.details = details;
+  }
+}

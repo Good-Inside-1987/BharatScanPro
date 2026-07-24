@@ -20,6 +20,7 @@ import {
   SessionExpiredError,
   RateLimitError,
   BrokerUnavailableError,
+  InvalidSymbolError,
 } from "../errors/brokerErrors.js";
 
 /**
@@ -77,6 +78,11 @@ function handleBrokerError(err: unknown, res: Response, context: string): boolea
   if (err instanceof BrokerUnavailableError) {
     console.warn("[marketData] %s — broker unavailable: %s", context, err.message);
     res.status(503).json({ error: err.message, code: err.code, details: err.details });
+    return true;
+  }
+  if (err instanceof InvalidSymbolError) {
+    console.warn("[marketData] %s — invalid symbol: %s", context, err.message);
+    res.status(422).json({ error: err.message, code: err.code, details: err.details });
     return true;
   }
   return false;

@@ -36,7 +36,7 @@ description: Findings from deep Electron/Fyers diagnosis session; what works, wh
 
 ## Fix order (agreed with user, do one at a time)
 1. ✅ Fyers REST error preservation — DONE (previous session added structured `details` to error responses)
-2. ⬜ INVALID_SYMBOL classification — classify "Invalid symbol provided" separately from BROKER_UNAVAILABLE
+2. ✅ INVALID_SYMBOL classification — new `InvalidSymbolError` class (code: INVALID_SYMBOL, HTTP 422); `classifyAdapterError` detects "Invalid symbol provided" pattern; syncJobs logs at warn+continue instead of error; route returns 422
 3. ⬜ Fix empty-result / backfill coverage behavior
 4. ⬜ Improve EOD sync summaries (log representative failures, not thousands of blank lines)
 5. ⬜ Invalid-symbol persistence and skipping (exclude from future EOD runs)
