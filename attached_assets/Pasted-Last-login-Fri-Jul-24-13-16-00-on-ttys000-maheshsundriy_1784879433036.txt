@@ -1,0 +1,94 @@
+Last login: Fri Jul 24 13:16:00 on ttys000
+maheshsundriyal@Maheshs-Mac-mini ~ % cd ~/BharatScanPro/BharatScanPro
+git pull
+remote: Enumerating objects: 13, done.
+remote: Counting objects: 100% (13/13), done.
+remote: Compressing objects: 100% (6/6), done.
+remote: Total 13 (delta 7), reused 13 (delta 7), pack-reused 0 (from 0)
+Unpacking objects: 100% (13/13), 40.42 KiB | 962.00 KiB/s, done.
+From https://github.com/Good-Inside-1987/BharatScanPro
+   91ca0e3..0a94740  main       -> origin/main
+Updating 91ca0e3..0a94740
+Fast-forward
+ ...ast-login-Fri-Jul-24-11-50-11-on-ttys001-maheshsundriy_1784878463263.txt |  107 ++
+ ...aheshsundriyal-Maheshs-Mac-mini-BharatScanPro-cd-Bhara_1784877456934.txt |  304 ++++
+ ...aheshsundriyal-Maheshs-Mac-mini-BharatScanPro-cd-Bhara_1784879046402.txt |   50 +
+ attached_assets/Screenshot_2026-07-24_at_11.08.02_AM_1784877430801.png      |  Bin 0 -> 36246 bytes
+ attached_assets/Watchlists_&_Holidays_&_Quotations_1784877768125.csv        | 2732 +++++++++++++++++++++++++++++++++++
+ 5 files changed, 3193 insertions(+)
+ create mode 100644 attached_assets/Pasted-Last-login-Fri-Jul-24-11-50-11-on-ttys001-maheshsundriy_1784878463263.txt
+ create mode 100644 attached_assets/Pasted-maheshsundriyal-Maheshs-Mac-mini-BharatScanPro-cd-Bhara_1784877456934.txt
+ create mode 100644 attached_assets/Pasted-maheshsundriyal-Maheshs-Mac-mini-BharatScanPro-cd-Bhara_1784879046402.txt
+ create mode 100644 attached_assets/Screenshot_2026-07-24_at_11.08.02_AM_1784877430801.png
+ create mode 100644 attached_assets/Watchlists_&_Holidays_&_Quotations_1784877768125.csv
+maheshsundriyal@Maheshs-Mac-mini BharatScanPro % pnpm install
+Scope: all 5 workspace projects
+Already up to date
+Done in 176ms using pnpm v11.16.0
+maheshsundriyal@Maheshs-Mac-mini BharatScanPro % cd electron && npm install
+
+up to date, audited 245 packages in 2s
+
+35 packages are looking for funding
+  run `npm fund` for details
+
+5 vulnerabilities (4 high, 1 critical)
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+npm warn allow-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn allow-scripts   electron@40.10.6 (install: (install scripts present))
+npm warn allow-scripts
+npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.
+maheshsundriyal@Maheshs-Mac-mini electron % cd ~/BharatScanPro/BharatScanPro
+pnpm run electron:dev
+$ concurrently --kill-others-on-fail --names "vite,electron" -c "cyan,magenta" "pnpm --filter @workspace/bharatscan run dev" "pnpm --dir electron run dev"
+[electron] $ electron .
+[vite] $ vite --config vite.config.ts --host 0.0.0.0
+[vite] 
+[vite]   VITE v7.3.2  ready in 100 ms
+[vite] 
+[vite]   ➜  Local:   http://localhost:5173/
+[vite]   ➜  Network: http://192.168.29.176:5173/
+[electron] [electron] Data directory: /Users/maheshsundriyal/Library/Application Support/BharatScan/bharatscan-data
+[electron] [electron] isDev: true — loading from http://localhost:5173
+[electron] [server] ◇ injected env (4) from .env // tip: ⌘ enable debugging { debug: true }
+[electron] [server] [migrate] No bharatscan.db found — skipping migration
+[electron] [server] BharatScan server running on http://localhost:3001
+[electron] [server] [syncJobs] Cleaned up 1 orphaned 'running' sync_log row(s) from previous process
+[electron] [server] [catchUpScheduler] Startup catch-up: 3 missed job/day runs to process
+[electron] [server] [catchUpScheduler] Catching up eod_sync for 2026-07-23 ...
+[electron] [server] [scheduler] Market is open and live feed isn't connected — starting it now
+[electron] [server] [scheduler] Market open — live feed budget: 85 F&O stocks + 115 options slots (ATM ±5, 5 indices)
+[electron] [server] [syncJobs] EOD sync starting — 2964 symbols for 2026-07-23 (universe: all_nse)
+[electron] [server] [liveFeedService] F&O auto-subscribe: 0/0 lowest-priced symbols subscribed (0 eligible with a known price)
+[electron] [server] [liveOptionsTracker] Initialising ATM option subscriptions for 5 index/indices (window ±5, budget 115/200 slots)
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-28 for NIFTY (already resolved today)
+[electron] [electron] ✓ Express server ready at http://localhost:3001/api/health
+[electron] [server] [liveOptionsTracker] No spot price in chain for NIFTY — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-28 for BANKNIFTY (already resolved today)
+[electron] [electron] ✓ Vite dev server ready at localhost: 5173
+[electron] [server] [liveOptionsTracker] No spot price in chain for BANKNIFTY — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-28 for FINNIFTY (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for FINNIFTY — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-30 for SENSEX (already resolved today)
+[electron] [server] [syncJobs] Failed to sync ABNINT @ 2026-07-23: 
+[electron] [server] [liveOptionsTracker] No spot price in chain for SENSEX — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-28 for MIDCPNIFTY (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for MIDCPNIFTY — skipping
+[electron] [server] [liveOptionsTracker] Init complete — 0 indices tracked, 0 contracts + 0 index spots subscribed
+[electron] [liveOptionsTracker] ATM roll tracking started (interval 120s)
+[electron] [server] [marketData] /scanner/universe-data — 2891 symbols, 2921 bars (2024-07-24 → 2026-07-24)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [syncJobs] Failed to sync AMBANIORGO @ 2026-07-23: 
+[electron] [server] [syncJobs] Failed to sync AMIABLE @ 2026-07-23: 
+[electron] [server] [syncJobs] Failed to sync ARIHANTACA @ 2026-07-23: 
+[electron] [server] [syncJobs] Failed to sync ASCOM @ 2026-07-23: 
+[electron] [server] [syncJobs] Failed to sync AVATAR @ 2026-07-23: 
+[electron] [server] [syncJobs] Failed to sync AVSL @ 2026-07-23: 
+[electron] [server] [syncJobs] Failed to sync BAGDIGITAL @ 2026-07-23: 
+[electron] [server] [syncJobs] Failed to sync BDR @ 2026-07-23: 
+[electron] [server] [syncJobs] Failed to sync BIRDYS @ 2026-07-23: 
+[electron] [server] [syncJobs] Failed to sync BOSS @ 2026-07-23: 
