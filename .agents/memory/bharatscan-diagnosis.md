@@ -10,6 +10,8 @@ description: Findings from deep Electron/Fyers diagnosis session; what works, wh
 - Fyers WebSocket bridge connects: `[liveFeedService] Connected to Fyers data feed (Python bridge)`
 - Fyers REST adapter reaches Fyers successfully for valid symbols
 - `NSE:RELIANCE-EQ` returns correct EOD candles (e.g. 5 bars for 2026-07-20→2026-07-24)
+- Authenticated in-app history requests distinguish valid and invalid symbols: RELIANCE returns candles; ABNINT returns Fyers's `Invalid symbol provided`.
+- Terminal `curl` requests without the Electron session return BharatScan `Unauthorized`; they do not test Fyers.
 
 ## What is broken / root causes identified
 
@@ -58,4 +60,13 @@ description: Findings from deep Electron/Fyers diagnosis session; what works, wh
 - Replit dev: `./data/` (same filenames)
 - These are completely separate; code changes in Replit reach Mac only via `git pull`
 
-**Why:** Keeping this so future sessions don't re-diagnose what's already proven.
+## Environment boundary and working process
+- Application code, schema migrations, tests, and Replit workflows are changed and verified in Replit.
+- Mac commands are only for the Mac Electron runtime: installing its Python sidecar dependency, starting Electron, and checking its separate databases.
+- After Replit changes are published to the shared Git remote, the Mac app must pull the code and restart; its existing database and broker session remain local.
+- Test protected history endpoints from the authenticated Electron app (or provide its session explicitly without printing it), not from a fresh terminal `curl`.
+- The user prefers the roadmap to be applied one numbered change at a time, with verification and a report before starting the next change.
+
+**Why:** The Mac Electron process and Replit preview use separate runtimes, sessions, and SQLite files; mixing their logs or assuming shared state produces false diagnoses. Keeping changes incremental makes each Fyers/data fix independently verifiable.
+
+**How to apply:** For future BharatScan work, first identify whether evidence comes from Replit or Mac Electron, preserve the existing fix order unless the user changes it, and never request or store secrets/tokens in diagnostics.
