@@ -48,7 +48,7 @@ function isSamePrice(a: number, b: number): boolean {
   return a > 0 && b > 0 && Math.abs(a - b) < 0.005;
 }
 
-function SpreadsheetHeader({
+function TableHeader({
   label,
   className = "",
 }: {
@@ -58,11 +58,11 @@ function SpreadsheetHeader({
   return (
     <th
       scope="col"
-      className={`sticky top-0 z-[1] border-r border-slate-700/70 px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-slate-950 ${className}`}
+      className={`sticky top-0 z-[1] border-b border-border/60 px-3 py-2 text-right text-[9px] font-bold uppercase tracking-wide text-muted-foreground ${className}`}
     >
-      <div className="flex items-center justify-center gap-1">
+      <div className="flex items-center justify-end gap-1">
         {label}
-        <span className="text-[8px] opacity-50">▾</span>
+        <span className="text-[8px] opacity-40">↕</span>
       </div>
     </th>
   );
@@ -157,13 +157,10 @@ export default function StockIntraday() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container py-3 space-y-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      <main className="container space-y-3 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
-              <Table2 className="h-4 w-4 text-primary" />
-              <h1 className="text-base font-bold text-foreground">Stock Intraday</h1>
-            </div>
+            <h1 className="text-base font-bold text-foreground">Stock Intraday</h1>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
               Live OHLCV snapshot with OPEN=LOW and OPEN=HIGH conditions
             </p>
@@ -172,7 +169,7 @@ export default function StockIntraday() {
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] font-medium text-muted-foreground">Stock universe</span>
               <Select value={selectedUniverseId} onValueChange={setSelectedUniverseId}>
-                <SelectTrigger className="h-8 min-w-[190px] bg-input text-xs">
+              <SelectTrigger className="h-8 min-w-[190px] bg-muted/30 text-xs">
                   <SelectValue placeholder="Pick a universe…" />
                 </SelectTrigger>
                 <SelectContent>
@@ -231,20 +228,31 @@ export default function StockIntraday() {
               </div>
             )}
 
-            <Card className="overflow-hidden shadow-card">
+             <Card className="overflow-hidden shadow-card">
+               <div className="flex items-center justify-between border-b border-border bg-muted/20 px-3 py-2">
+                 <div className="flex items-center gap-1.5">
+                   <Table2 className="h-3.5 w-3.5 text-cyan-400" />
+                   <h3 className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                     Stock Intraday — Live OHLCV Snapshot
+                   </h3>
+                 </div>
+                 <span className="text-[9px] text-muted-foreground/40">
+                   {rows.length.toLocaleString("en-IN")} symbols
+                 </span>
+               </div>
               <div className="overflow-auto">
-                <table className="min-w-[1060px] w-full border-collapse text-xs">
+                 <table className="w-full min-w-[960px] text-xs">
                   <thead>
-                    <tr className="bg-sky-500">
-                      <SpreadsheetHeader label="Ticker" className="w-[180px] bg-sky-500" />
-                      <SpreadsheetHeader label="Prv. Close" className="bg-sky-500" />
-                      <SpreadsheetHeader label="Open" className="bg-sky-500" />
-                      <SpreadsheetHeader label="High" className="bg-sky-500" />
-                      <SpreadsheetHeader label="Low" className="bg-sky-500" />
-                      <SpreadsheetHeader label="LTP" className="bg-sky-500" />
-                      <SpreadsheetHeader label="Volume" className="bg-yellow-300" />
-                      <SpreadsheetHeader label="OPEN=LOW" className="bg-orange-400" />
-                      <SpreadsheetHeader label="OPEN=HIGH" className="bg-orange-400" />
+                     <tr>
+                       <TableHeader label="Ticker" className="w-[180px] text-left" />
+                       <TableHeader label="Prv. Close" />
+                       <TableHeader label="Open" />
+                       <TableHeader label="High" />
+                       <TableHeader label="Low" />
+                       <TableHeader label="LTP" />
+                       <TableHeader label="Volume" />
+                       <TableHeader label="OPEN=LOW" className="text-center" />
+                       <TableHeader label="OPEN=HIGH" className="text-center" />
                     </tr>
                   </thead>
                   <tbody>
@@ -254,22 +262,32 @@ export default function StockIntraday() {
                       return (
                         <tr
                           key={ticker}
-                          className={`border-b border-slate-300/80 ${index % 2 ? "bg-background" : "bg-muted/20"} hover:bg-primary/10`}
+                           className={`border-t border-border/40 transition-colors ${
+                             index % 2 === 0 ? "bg-card hover:bg-primary/5" : "bg-muted/10 hover:bg-primary/5"
+                           }`}
                         >
-                          <td className="border-r border-slate-300/80 px-3 py-1.5 font-semibold tracking-wide text-foreground">
+                          <td className="px-3 py-2 font-bold tracking-wide text-foreground">
                             {ticker}
                           </td>
-                          <td className="border-r border-slate-300/80 px-3 py-1.5 text-right tabular-nums">{formatPrice(quote?.close)}</td>
-                          <td className="border-r border-slate-300/80 px-3 py-1.5 text-right tabular-nums">{formatPrice(quote?.open)}</td>
-                          <td className="border-r border-slate-300/80 px-3 py-1.5 text-right tabular-nums">{formatPrice(quote?.high)}</td>
-                          <td className="border-r border-slate-300/80 px-3 py-1.5 text-right tabular-nums">{formatPrice(quote?.low)}</td>
-                          <td className="border-r border-slate-300/80 px-3 py-1.5 text-right tabular-nums font-semibold">{formatPrice(quote?.ltp)}</td>
-                          <td className="border-r border-slate-300/80 bg-yellow-300/10 px-3 py-1.5 text-right tabular-nums">{formatVolume(quote?.volume)}</td>
-                          <td className={`border-r border-slate-300/80 px-3 py-1.5 text-center text-[10px] font-bold ${openLow ? "bg-green-600 text-white" : ""}`}>
-                            {quote ? (openLow ? "POSITIVE" : "") : "—"}
+                          <td className="px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground">{formatPrice(quote?.close)}</td>
+                          <td className="px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground">{formatPrice(quote?.open)}</td>
+                          <td className="px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground">{formatPrice(quote?.high)}</td>
+                          <td className="px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground">{formatPrice(quote?.low)}</td>
+                          <td className="px-3 py-2 text-right text-xs font-semibold tabular-nums text-foreground">{formatPrice(quote?.ltp)}</td>
+                          <td className="px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground">{formatVolume(quote?.volume)}</td>
+                          <td className="px-3 py-2 text-center text-[10px] font-bold">
+                            {quote ? (
+                              openLow ? (
+                                <span className="inline-flex rounded bg-emerald-400/15 px-1.5 py-0.5 text-emerald-400">POSITIVE</span>
+                              ) : "—"
+                            ) : "—"}
                           </td>
-                          <td className={`px-3 py-1.5 text-center text-[10px] font-bold ${openHigh ? "bg-green-600 text-white" : ""}`}>
-                            {quote ? (openHigh ? "POSITIVE" : "") : "—"}
+                          <td className="px-3 py-2 text-center text-[10px] font-bold">
+                            {quote ? (
+                              openHigh ? (
+                                <span className="inline-flex rounded bg-emerald-400/15 px-1.5 py-0.5 text-emerald-400">POSITIVE</span>
+                              ) : "—"
+                            ) : "—"}
                           </td>
                         </tr>
                       );
