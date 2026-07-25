@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   Database,
+  Plus,
   RefreshCw,
   Table2,
   Wifi,
@@ -48,6 +49,29 @@ function isSamePrice(a: number, b: number): boolean {
   return a > 0 && b > 0 && Math.abs(a - b) < 0.005;
 }
 
+type ConditionKey =
+  | "open-low"
+  | "open-high"
+  | "ltp-open"
+  | "ltp-close"
+  | "high-close"
+  | "low-close";
+
+interface ConditionDefinition {
+  key: ConditionKey;
+  label: string;
+  matches: (quote: ApiLiveQuote) => boolean;
+}
+
+const CONDITION_OPTIONS: ConditionDefinition[] = [
+  { key: "open-low", label: "OPEN=LOW", matches: (quote) => isSamePrice(quote.open, quote.low) },
+  { key: "open-high", label: "OPEN=HIGH", matches: (quote) => isSamePrice(quote.open, quote.high) },
+  { key: "ltp-open", label: "LTP>OPEN", matches: (quote) => quote.ltp > quote.open && quote.ltp > 0 && quote.open > 0 },
+  { key: "ltp-close", label: "LTP>PRV CLOSE", matches: (quote) => quote.ltp > quote.close && quote.ltp > 0 && quote.close > 0 },
+  { key: "high-close", label: "HIGH>PRV CLOSE", matches: (quote) => quote.high > quote.close && quote.high > 0 && quote.close > 0 },
+  { key: "low-close", label: "LOW<PRV CLOSE", matches: (quote) => quote.low < quote.close && quote.low > 0 && quote.close > 0 },
+];
+
 function CellValue({
   children,
   className = "",
@@ -80,12 +104,9 @@ function TableHeader({
   return (
     <th
       scope="col"
-      className={`sticky top-0 z-[1] border-b border-r border-border/60 px-3 py-2 text-[9px] font-bold uppercase tracking-wide text-muted-foreground last:border-r-0 ${className}`}
+      className={`sticky top-0 z-[1] border-b border-r border-border/60 px-2 py-1.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground last:border-r-0 ${className}`}
     >
-      <div className={`flex items-center gap-1 ${alignment}`}>
-        {label}
-        <span className="text-[8px] opacity-40">↕</span>
-      </div>
+      <div className={`flex items-center gap-1 whitespace-nowrap ${alignment}`}>{label}</div>
     </th>
   );
 }
@@ -98,6 +119,7 @@ function quoteTicker(quote: ApiLiveQuote): string {
 export default function StockIntraday() {
   const { categories } = useData();
   const [selectedUniverseId, setSelectedUniverseId] = useState("");
+  const [conditionColumns, setConditionColumns] = useState<ConditionKey[]>(["open-low", "open-high"]);
   const [quotes, setQuotes] = useState<Record<string, ApiLiveQuote>>({});
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -173,6 +195,12 @@ export default function StockIntraday() {
   }, [selectedUniverseId]);
 
   const quoteCount = rows.filter((row) => row.quote).length;
+  const addConditionColumn = () => {
+    setConditionColumns((current) => [
+      ...current,
+      CONDITION_OPTIONS[current.length % CONDITION_OPTIONS.length].key,
+    ]);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -260,18 +288,38 @@ export default function StockIntraday() {
                  </span>
                </div>
               <div className="overflow-auto">
-                 <table className="w-full min-w-[960px] text-xs">
+                  <table className="w-max min-w-[860px] table-fixed text-xs">
                   <thead>
                      <tr>
-                       <TableHeader label="Ticker" align="left" className="w-[180px]" />
-                       <TableHeader label="Prv. Close" />
-                       <TableHeader label="Open" />
-                       <TableHeader label="High" />
-                       <TableHeader label="Low" />
-                       <TableHeader label="LTP" />
-                       <TableHeader label="Volume" />
-                       <TableHeader label="OPEN=LOW" align="center" />
-                       <TableHeader label="OPEN=HIGH" align="center" />
+                       <TableHeader label="Ticker" align="left" className="w-[130px]" />
+                       <TableHeader label="Prv. Close" className="w-[82px]" />
+                       <TableHeader label="Open" className="w-[82px]" />
+                       <TableHeader label="High" className="w-[82px]" />
+                       <TableHeader label="Low" className="w-[82px]" />
+                       <TableHeader label="LTP" className="w-[82px]" />
+                       <TableHeader label="Volume" className="w-[92px]" />
+                       {conditionColumns.map((conditionKey, index) => {
+                         const condition = CONDITION_OPTIONS.find((option) => option.key === conditionKey) ?? CONDITION_OPTIONS[0];
+                         return (
+                           <TableHeader
+                             key={`${conditionKey}-${index}`}
+                             label={condition.label}
+                             align="center"
+                             className="w-[100px]"
+                           />
+                         );
+                       })}
+                       <th className="sticky top-0 z-[1] w-[34px] border-b border-border/60 px-1 py-1.5">
+                         <button
+                           type="button"
+                           aria-label="Add condition column"
+                           title="Add condition column"
+                           onClick={addConditionColumn}
+                           className="mx-auto flex h-5 w-5 items-center justify-center rounded text-base font-medium leading-none text-muted-foreground transition-colors hover:bg-primary/15 hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                         >
+                           <Plus className="h-3.5 w-3.5" />
+                         </button>
+                       </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -285,47 +333,50 @@ export default function StockIntraday() {
                              index % 2 === 0 ? "bg-card hover:bg-primary/5" : "bg-muted/10 hover:bg-primary/5"
                            }`}
                         >
-                          <td className="border-r border-border/35 px-3 py-2 text-left font-bold tracking-wide text-foreground last:border-r-0">
+                           <td className="border-r border-border/35 px-2 py-1.5 text-left font-bold tracking-wide text-foreground last:border-r-0">
                             {ticker}
                           </td>
-                          <td className="border-r border-border/35 px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
+                          <td className="border-r border-border/35 px-2 py-1.5 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
                             <CellValue className="text-muted-foreground">{formatPrice(quote?.close)}</CellValue>
                           </td>
-                          <td className="border-r border-border/35 px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
+                          <td className="border-r border-border/35 px-2 py-1.5 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
                             <CellValue className="text-muted-foreground">{formatPrice(quote?.open)}</CellValue>
                           </td>
-                          <td className="border-r border-border/35 px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
+                          <td className="border-r border-border/35 px-2 py-1.5 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
                             <CellValue className="text-muted-foreground">{formatPrice(quote?.high)}</CellValue>
                           </td>
-                          <td className="border-r border-border/35 px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
+                          <td className="border-r border-border/35 px-2 py-1.5 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
                             <CellValue className="text-muted-foreground">{formatPrice(quote?.low)}</CellValue>
                           </td>
-                          <td className="border-r border-border/35 px-3 py-2 text-right text-xs font-semibold tabular-nums text-foreground last:border-r-0">
+                          <td className="border-r border-border/35 px-2 py-1.5 text-right text-xs font-semibold tabular-nums text-foreground last:border-r-0">
                             <CellValue className="text-foreground">{formatPrice(quote?.ltp)}</CellValue>
                           </td>
-                          <td className="border-r border-border/35 px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
+                          <td className="border-r border-border/35 px-2 py-1.5 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
                             <CellValue className="text-muted-foreground">{formatVolume(quote?.volume)}</CellValue>
                           </td>
-                          <td className="border-r border-border/35 px-3 py-2 text-center text-[10px] font-bold last:border-r-0">
-                            {quote ? (
-                              openLow ? (
-                                <span className="inline-flex rounded bg-emerald-400/15 px-1.5 py-0.5 text-emerald-400">POSITIVE</span>
-                              ) : <CellValue>—</CellValue>
-                            ) : <CellValue>—</CellValue>}
-                          </td>
-                          <td className="border-r border-border/35 px-3 py-2 text-center text-[10px] font-bold last:border-r-0">
-                            {quote ? (
-                              openHigh ? (
-                                <span className="inline-flex rounded bg-emerald-400/15 px-1.5 py-0.5 text-emerald-400">POSITIVE</span>
-                              ) : <CellValue>—</CellValue>
-                            ) : <CellValue>—</CellValue>}
-                          </td>
+                          {conditionColumns.map((conditionKey, conditionIndex) => {
+                            const condition = CONDITION_OPTIONS.find((option) => option.key === conditionKey) ?? CONDITION_OPTIONS[0];
+                            const matches = quote ? condition.matches(quote) : null;
+                            return (
+                              <td
+                                key={`${conditionKey}-${conditionIndex}`}
+                                className="border-r border-border/35 px-2 py-1.5 text-center text-[10px] font-bold last:border-r-0"
+                              >
+                                {matches === true ? (
+                                  <span className="inline-flex rounded bg-emerald-400/15 px-1.5 py-0.5 text-emerald-400">POSITIVE</span>
+                                ) : (
+                                  <CellValue>—</CellValue>
+                                )}
+                              </td>
+                            );
+                          })}
+                          <td className="border-r border-border/35 px-1 py-1.5 last:border-r-0" />
                         </tr>
                       );
                     })}
                     {!rows.length && (
                       <tr>
-                        <td colSpan={9} className="px-4 py-12 text-center text-xs text-muted-foreground">
+                        <td colSpan={conditionColumns.length + 8} className="px-4 py-12 text-center text-xs text-muted-foreground">
                           This universe has no symbols.
                         </td>
                       </tr>
