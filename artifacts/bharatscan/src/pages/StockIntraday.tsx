@@ -48,19 +48,41 @@ function isSamePrice(a: number, b: number): boolean {
   return a > 0 && b > 0 && Math.abs(a - b) < 0.005;
 }
 
-function TableHeader({
-  label,
+function CellValue({
+  children,
   className = "",
 }: {
-  label: string;
+  children: string;
   className?: string;
 }) {
   return (
+    <span className={children === "—" ? "text-muted-foreground/35" : className}>
+      {children}
+    </span>
+  );
+}
+
+function TableHeader({
+  label,
+  align = "right",
+  className = "",
+}: {
+  label: string;
+  align?: "left" | "center" | "right";
+  className?: string;
+}) {
+  const alignment = {
+    left: "justify-start text-left",
+    center: "justify-center text-center",
+    right: "justify-end text-right",
+  }[align];
+
+  return (
     <th
       scope="col"
-      className={`sticky top-0 z-[1] border-b border-border/60 px-3 py-2 text-right text-[9px] font-bold uppercase tracking-wide text-muted-foreground ${className}`}
+      className={`sticky top-0 z-[1] border-b border-r border-border/60 px-3 py-2 text-[9px] font-bold uppercase tracking-wide text-muted-foreground last:border-r-0 ${className}`}
     >
-      <div className="flex items-center justify-end gap-1">
+      <div className={`flex items-center gap-1 ${alignment}`}>
         {label}
         <span className="text-[8px] opacity-40">↕</span>
       </div>
@@ -81,10 +103,7 @@ export default function StockIntraday() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const stockUniverses = useMemo<UniverseCategory[]>(() => {
-    const withoutFutures = categories.filter((category) => !/^futures?$/i.test(category.name.trim()));
-    return withoutFutures.length ? withoutFutures : categories;
-  }, [categories]);
+  const stockUniverses = useMemo<UniverseCategory[]>(() => categories, [categories]);
 
   useEffect(() => {
     if (!stockUniverses.length) {
@@ -244,15 +263,15 @@ export default function StockIntraday() {
                  <table className="w-full min-w-[960px] text-xs">
                   <thead>
                      <tr>
-                       <TableHeader label="Ticker" className="w-[180px] text-left" />
+                       <TableHeader label="Ticker" align="left" className="w-[180px]" />
                        <TableHeader label="Prv. Close" />
                        <TableHeader label="Open" />
                        <TableHeader label="High" />
                        <TableHeader label="Low" />
                        <TableHeader label="LTP" />
                        <TableHeader label="Volume" />
-                       <TableHeader label="OPEN=LOW" className="text-center" />
-                       <TableHeader label="OPEN=HIGH" className="text-center" />
+                       <TableHeader label="OPEN=LOW" align="center" />
+                       <TableHeader label="OPEN=HIGH" align="center" />
                     </tr>
                   </thead>
                   <tbody>
@@ -266,28 +285,40 @@ export default function StockIntraday() {
                              index % 2 === 0 ? "bg-card hover:bg-primary/5" : "bg-muted/10 hover:bg-primary/5"
                            }`}
                         >
-                          <td className="px-3 py-2 font-bold tracking-wide text-foreground">
+                          <td className="border-r border-border/35 px-3 py-2 text-left font-bold tracking-wide text-foreground last:border-r-0">
                             {ticker}
                           </td>
-                          <td className="px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground">{formatPrice(quote?.close)}</td>
-                          <td className="px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground">{formatPrice(quote?.open)}</td>
-                          <td className="px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground">{formatPrice(quote?.high)}</td>
-                          <td className="px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground">{formatPrice(quote?.low)}</td>
-                          <td className="px-3 py-2 text-right text-xs font-semibold tabular-nums text-foreground">{formatPrice(quote?.ltp)}</td>
-                          <td className="px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground">{formatVolume(quote?.volume)}</td>
-                          <td className="px-3 py-2 text-center text-[10px] font-bold">
+                          <td className="border-r border-border/35 px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
+                            <CellValue className="text-muted-foreground">{formatPrice(quote?.close)}</CellValue>
+                          </td>
+                          <td className="border-r border-border/35 px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
+                            <CellValue className="text-muted-foreground">{formatPrice(quote?.open)}</CellValue>
+                          </td>
+                          <td className="border-r border-border/35 px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
+                            <CellValue className="text-muted-foreground">{formatPrice(quote?.high)}</CellValue>
+                          </td>
+                          <td className="border-r border-border/35 px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
+                            <CellValue className="text-muted-foreground">{formatPrice(quote?.low)}</CellValue>
+                          </td>
+                          <td className="border-r border-border/35 px-3 py-2 text-right text-xs font-semibold tabular-nums text-foreground last:border-r-0">
+                            <CellValue className="text-foreground">{formatPrice(quote?.ltp)}</CellValue>
+                          </td>
+                          <td className="border-r border-border/35 px-3 py-2 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
+                            <CellValue className="text-muted-foreground">{formatVolume(quote?.volume)}</CellValue>
+                          </td>
+                          <td className="border-r border-border/35 px-3 py-2 text-center text-[10px] font-bold last:border-r-0">
                             {quote ? (
                               openLow ? (
                                 <span className="inline-flex rounded bg-emerald-400/15 px-1.5 py-0.5 text-emerald-400">POSITIVE</span>
-                              ) : "—"
-                            ) : "—"}
+                              ) : <CellValue>—</CellValue>
+                            ) : <CellValue>—</CellValue>}
                           </td>
-                          <td className="px-3 py-2 text-center text-[10px] font-bold">
+                          <td className="border-r border-border/35 px-3 py-2 text-center text-[10px] font-bold last:border-r-0">
                             {quote ? (
                               openHigh ? (
                                 <span className="inline-flex rounded bg-emerald-400/15 px-1.5 py-0.5 text-emerald-400">POSITIVE</span>
-                              ) : "—"
-                            ) : "—"}
+                              ) : <CellValue>—</CellValue>
+                            ) : <CellValue>—</CellValue>}
                           </td>
                         </tr>
                       );
