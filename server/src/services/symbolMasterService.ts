@@ -29,19 +29,39 @@ interface NseIndexCfg {
   url: string;
 }
 
+// All major NSE index constituents.  New indices can be added here; a failed
+// fetch for any one entry is logged as a warning and skipped — it will not
+// abort the overall sync.  Names here become the token stored in the
+// index_membership column (e.g. "NIFTY50,NIFTY100") and MUST match the
+// DISPLAY_NAME keys in server/src/routes/universe.ts.
 const NSE_INDICES: NseIndexCfg[] = [
-  {
-    name: "NIFTY50",
-    url: "https://nsearchives.nseindia.com/content/indices/ind_nifty50list.csv",
-  },
-  {
-    name: "NIFTY100",
-    url: "https://nsearchives.nseindia.com/content/indices/ind_nifty100list.csv",
-  },
-  {
-    name: "NIFTY500",
-    url: "https://nsearchives.nseindia.com/content/indices/ind_nifty500list.csv",
-  },
+  // ── Broad market ───────────────────────────────────────────────────────
+  { name: "NIFTY50",       url: "https://nsearchives.nseindia.com/content/indices/ind_nifty50list.csv" },
+  { name: "NIFTYNEXT50",   url: "https://nsearchives.nseindia.com/content/indices/ind_niftynext50list.csv" },
+  { name: "NIFTY100",      url: "https://nsearchives.nseindia.com/content/indices/ind_nifty100list.csv" },
+  { name: "NIFTY200",      url: "https://nsearchives.nseindia.com/content/indices/ind_nifty200list.csv" },
+  { name: "NIFTY500",      url: "https://nsearchives.nseindia.com/content/indices/ind_nifty500list.csv" },
+  // ── Midcap ─────────────────────────────────────────────────────────────
+  { name: "NIFTYMIDCAP50",  url: "https://nsearchives.nseindia.com/content/indices/ind_niftymidcap50list.csv" },
+  { name: "NIFTYMIDCAP100", url: "https://nsearchives.nseindia.com/content/indices/ind_niftymidcap100list.csv" },
+  { name: "NIFTYMIDCAP150", url: "https://nsearchives.nseindia.com/content/indices/ind_niftymidcap150list.csv" },
+  // ── Smallcap ───────────────────────────────────────────────────────────
+  { name: "NIFTYSMALLCAP50",  url: "https://nsearchives.nseindia.com/content/indices/ind_niftysmallcap50list.csv" },
+  { name: "NIFTYSMALLCAP100", url: "https://nsearchives.nseindia.com/content/indices/ind_niftysmallcap100list.csv" },
+  { name: "NIFTYSMALLCAP250", url: "https://nsearchives.nseindia.com/content/indices/ind_niftysmallcap250list.csv" },
+  // ── Microcap ───────────────────────────────────────────────────────────
+  { name: "NIFTYMICROCAP250", url: "https://nsearchives.nseindia.com/content/indices/ind_niftymicrocap250list.csv" },
+  // ── Sectoral / thematic ────────────────────────────────────────────────
+  { name: "NIFTYBANK",       url: "https://nsearchives.nseindia.com/content/indices/ind_niftybanklist.csv" },
+  { name: "NIFTYIT",         url: "https://nsearchives.nseindia.com/content/indices/ind_niftyitlist.csv" },
+  { name: "NIFTYPHARMA",     url: "https://nsearchives.nseindia.com/content/indices/ind_niftypharmalist.csv" },
+  { name: "NIFTYAUTO",       url: "https://nsearchives.nseindia.com/content/indices/ind_niftyautolist.csv" },
+  { name: "NIFTYFMCG",       url: "https://nsearchives.nseindia.com/content/indices/ind_niftyfmcglist.csv" },
+  { name: "NIFTYFINSERVICE",  url: "https://nsearchives.nseindia.com/content/indices/ind_niftyfinancelist.csv" },
+  { name: "NIFTYMETAL",      url: "https://nsearchives.nseindia.com/content/indices/ind_niftymetallist.csv" },
+  { name: "NIFTYREALTY",     url: "https://nsearchives.nseindia.com/content/indices/ind_niftyrealtylist.csv" },
+  { name: "NIFTYOILGAS",     url: "https://nsearchives.nseindia.com/content/indices/ind_niftyoilgaslist.csv" },
+  { name: "NIFTYMEDIA",      url: "https://nsearchives.nseindia.com/content/indices/ind_niftymedialist.csv" },
 ];
 
 // ── Fyers CM CSV column indices (no header row) ───────────────────────────

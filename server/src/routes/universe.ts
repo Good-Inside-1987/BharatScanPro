@@ -114,14 +114,46 @@ router.delete("/categories", (_req: Request, res: Response) => {
 });
 
 // ── GET /derived ─────────────────────────────────────────────────────────────
-// Generates universe categories directly from the symbol master (market.db)
-// so the dropdown is populated out of the box, before any CSV is uploaded.
-// Returns an empty array when the symbol master has never been synced.
+// Generates universe categories directly from the symbol master (market.db).
+// One category is emitted per NSE index found in index_membership, in a
+// canonical order defined by ORDERED_INDICES below.  Futures and NSE All are
+// appended at the end.  Returns [] when the symbol master has never been synced.
 //
-// Order: Nifty 50 → Nifty 100 → Nifty 500 → Futures → NSE All.
-// Names intentionally match OPTIONS_UNIVERSE_NAMES in Index.tsx /
-// ScannerDashboard.tsx ("nifty 50", "futures") so the Options-mode filter
-// keeps working without any changes to those pages.
+// The "nifty-50" and "futures" ids intentionally match OPTIONS_UNIVERSE_NAMES
+// in Index.tsx / ScannerDashboard.tsx so the Options-mode filter keeps working.
+
+// Canonical display names for every index key stored in index_membership.
+// Order here defines the order they appear in the dropdown.
+// Keys MUST match the `name` values in NSE_INDICES in symbolMasterService.ts.
+const ORDERED_INDICES: Array<{ key: string; label: string }> = [
+  // Broad market
+  { key: "NIFTY50",          label: "Nifty 50"          },
+  { key: "NIFTYNEXT50",      label: "Nifty Next 50"     },
+  { key: "NIFTY100",         label: "Nifty 100"         },
+  { key: "NIFTY200",         label: "Nifty 200"         },
+  { key: "NIFTY500",         label: "Nifty 500"         },
+  // Midcap
+  { key: "NIFTYMIDCAP50",    label: "Nifty Midcap 50"   },
+  { key: "NIFTYMIDCAP100",   label: "Nifty Midcap 100"  },
+  { key: "NIFTYMIDCAP150",   label: "Nifty Midcap 150"  },
+  // Smallcap
+  { key: "NIFTYSMALLCAP50",  label: "Nifty Smallcap 50"  },
+  { key: "NIFTYSMALLCAP100", label: "Nifty Smallcap 100" },
+  { key: "NIFTYSMALLCAP250", label: "Nifty Smallcap 250" },
+  // Microcap
+  { key: "NIFTYMICROCAP250", label: "Nifty Microcap 250" },
+  // Sectoral / thematic
+  { key: "NIFTYBANK",        label: "Nifty Bank"         },
+  { key: "NIFTYIT",          label: "Nifty IT"           },
+  { key: "NIFTYPHARMA",      label: "Nifty Pharma"       },
+  { key: "NIFTYAUTO",        label: "Nifty Auto"         },
+  { key: "NIFTYFMCG",        label: "Nifty FMCG"         },
+  { key: "NIFTYFINSERVICE",  label: "Nifty FinServ"      },
+  { key: "NIFTYMETAL",       label: "Nifty Metal"        },
+  { key: "NIFTYREALTY",      label: "Nifty Realty"       },
+  { key: "NIFTYOILGAS",      label: "Nifty Oil & Gas"    },
+  { key: "NIFTYMEDIA",       label: "Nifty Media"        },
+];
 
 router.get("/derived", (_req: Request, res: Response) => {
   try {
@@ -135,7 +167,7 @@ router.get("/derived", (_req: Request, res: Response) => {
       return;
     }
 
-    // Fetch an ordered list of tickers matching a WHERE fragment.
+    // Helper: fetch symbols matching a WHERE fragment, alphabetically sorted.
     function fetchSymbols(where: string): string[] {
       return (
         marketDb
@@ -146,21 +178,44 @@ router.get("/derived", (_req: Request, res: Response) => {
       ).map((r) => r.symbol);
     }
 
-    // index_membership is a comma-separated string like "NIFTY50,NIFTY100,NIFTY500".
-    // Bracket with commas to avoid "NIFTY500" matching a search for "NIFTY50".
-    const nifty50  = fetchSymbols("',' || COALESCE(index_membership,'') || ',' LIKE '%,NIFTY50,%'");
-    const nifty100 = fetchSymbols("',' || COALESCE(index_membership,'') || ',' LIKE '%,NIFTY100,%'");
-    const nifty500 = fetchSymbols("',' || COALESCE(index_membership,'') || ',' LIKE '%,NIFTY500,%'");
-    const futures  = fetchSymbols("is_fo_eligible = 1");
-    const nseAll   = fetchSymbols("1=1");
+    // Determine which index keys are actually present in this DB so we skip
+    // indices that weren't fetched yet (e.g. NSE returned 403 for that CSV).
+    const presentKeys = new Set<string>(
+      (
+        marketDb
+          .prepare(
+            `SELECT DISTINCT index_membership FROM symbols
+             WHERE is_delisted = 0 AND index_membership IS NOT NULL`
+          )
+          .all() as unknown as Array<{ index_membership: string }>
+      ).flatMap((r) => r.index_membership.split(",").map((k) => k.trim()))
+    );
 
-    const categories: UniverseCategory[] = [
-      { id: "nifty-50",  name: "Nifty 50",  symbols: nifty50  },
-      { id: "nifty-100", name: "Nifty 100", symbols: nifty100 },
-      { id: "nifty-500", name: "Nifty 500", symbols: nifty500 },
-      { id: "futures",   name: "Futures",   symbols: futures   },
-      { id: "nse-all",   name: "NSE All",   symbols: nseAll    },
-    ].filter((c) => c.symbols.length > 0);
+    const categories: UniverseCategory[] = [];
+
+    // One category per known index, in canonical order, only if data exists.
+    for (const { key, label } of ORDERED_INDICES) {
+      if (!presentKeys.has(key)) continue;
+      // Bracket with commas to prevent "NIFTY500" matching "NIFTY50".
+      const symbols = fetchSymbols(
+        `',' || index_membership || ',' LIKE '%,${key},%'`
+      );
+      if (symbols.length > 0) {
+        categories.push({ id: key.toLowerCase().replace(/_/g, "-"), name: label, symbols });
+      }
+    }
+
+    // Futures (F&O eligible) — always append before NSE All.
+    const futures = fetchSymbols("is_fo_eligible = 1");
+    if (futures.length > 0) {
+      categories.push({ id: "futures", name: "Futures", symbols: futures });
+    }
+
+    // NSE All — every non-delisted equity.
+    const nseAll = fetchSymbols("1=1");
+    if (nseAll.length > 0) {
+      categories.push({ id: "nse-all", name: "NSE All", symbols: nseAll });
+    }
 
     res.json({ categories });
   } catch (err) {
