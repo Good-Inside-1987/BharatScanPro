@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from "rea
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator, SelectLabel } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SelectSeparator, SelectLabel } from "@/components/ui/select";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Plus, Play, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Download, Save, History, Trash2, BarChart3, Minus, Copy, ClipboardPaste, FolderInput, X, AlertTriangle, Database, Search, Layers, ChevronUp, ChevronDown, Star, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
