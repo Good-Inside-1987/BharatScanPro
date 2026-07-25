@@ -19,7 +19,7 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import { appDb } from "../db.js";
+import { appDb, marketDb } from "../db.js";
 
 export interface UniverseCategory {
   id: string;
@@ -110,6 +110,62 @@ router.delete("/categories", (_req: Request, res: Response) => {
   } catch (err) {
     console.error("[universe] DELETE /categories error:", err instanceof Error ? err.message : err);
     res.status(500).json({ error: "Failed to clear universe categories" });
+  }
+});
+
+// ── GET /derived ─────────────────────────────────────────────────────────────
+// Generates universe categories directly from the symbol master (market.db)
+// so the dropdown is populated out of the box, before any CSV is uploaded.
+// Returns an empty array when the symbol master has never been synced.
+//
+// Order: Nifty 50 → Nifty 100 → Nifty 500 → Futures → NSE All.
+// Names intentionally match OPTIONS_UNIVERSE_NAMES in Index.tsx /
+// ScannerDashboard.tsx ("nifty 50", "futures") so the Options-mode filter
+// keeps working without any changes to those pages.
+
+router.get("/derived", (_req: Request, res: Response) => {
+  try {
+    const totalRow = marketDb
+      .prepare("SELECT COUNT(*) AS n FROM symbols WHERE is_delisted = 0")
+      .get() as { n: number };
+
+    if (totalRow.n === 0) {
+      // Symbol master not yet synced — caller falls back to localStorage.
+      res.json({ categories: [] });
+      return;
+    }
+
+    // Fetch an ordered list of tickers matching a WHERE fragment.
+    function fetchSymbols(where: string): string[] {
+      return (
+        marketDb
+          .prepare(
+            `SELECT symbol FROM symbols WHERE is_delisted = 0 AND ${where} ORDER BY symbol`
+          )
+          .all() as unknown as Array<{ symbol: string }>
+      ).map((r) => r.symbol);
+    }
+
+    // index_membership is a comma-separated string like "NIFTY50,NIFTY100,NIFTY500".
+    // Bracket with commas to avoid "NIFTY500" matching a search for "NIFTY50".
+    const nifty50  = fetchSymbols("',' || COALESCE(index_membership,'') || ',' LIKE '%,NIFTY50,%'");
+    const nifty100 = fetchSymbols("',' || COALESCE(index_membership,'') || ',' LIKE '%,NIFTY100,%'");
+    const nifty500 = fetchSymbols("',' || COALESCE(index_membership,'') || ',' LIKE '%,NIFTY500,%'");
+    const futures  = fetchSymbols("is_fo_eligible = 1");
+    const nseAll   = fetchSymbols("1=1");
+
+    const categories: UniverseCategory[] = [
+      { id: "nifty-50",  name: "Nifty 50",  symbols: nifty50  },
+      { id: "nifty-100", name: "Nifty 100", symbols: nifty100 },
+      { id: "nifty-500", name: "Nifty 500", symbols: nifty500 },
+      { id: "futures",   name: "Futures",   symbols: futures   },
+      { id: "nse-all",   name: "NSE All",   symbols: nseAll    },
+    ].filter((c) => c.symbols.length > 0);
+
+    res.json({ categories });
+  } catch (err) {
+    console.error("[universe] GET /derived error:", err instanceof Error ? err.message : err);
+    res.status(500).json({ error: "Failed to derive universe categories from symbol master" });
   }
 });
 

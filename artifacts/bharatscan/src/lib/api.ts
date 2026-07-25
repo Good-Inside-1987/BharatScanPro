@@ -108,6 +108,15 @@ export const apiSaveUniverseCategories = (categories: ApiUniverseCategory[]) =>
 export const apiClearUniverseCategories = () =>
   request<{ ok: boolean }>("/universe/categories", { method: "DELETE" });
 
+/** Fetch server-derived universe categories built from the symbol master
+ *  (Nifty 50, Nifty 100, Nifty 500, Futures, NSE All). These are always
+ *  fresh from the DB — no user upload required. Returns an empty array when
+ *  the symbol master has not yet been synced or on any network error. */
+export const apiGetDerivedCategories = () =>
+  request<{ categories: ApiUniverseCategory[] }>("/universe/derived")
+    .then((r) => r.categories)
+    .catch((): ApiUniverseCategory[] => []);
+
 // ── Market data (broker-backed live/historical feed) ────────────────────────
 
 export interface ApiHistoryBar {

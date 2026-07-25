@@ -11,7 +11,7 @@ import {
 import { parseOptionsCsv, parseOptionsApiRows, indexOptions, type OptionsDataset, type ApiOptionRow, type FuturesBar } from "@/lib/options";
 import { toast } from "sonner";
 import { get, set, del } from "idb-keyval";
-import { apiGetUniverseCategories, apiSaveUniverseCategories } from "@/lib/api";
+import { apiGetUniverseCategories, apiSaveUniverseCategories, apiGetDerivedCategories } from "@/lib/api";
 
 const FOLDER_KEY = "bharatscan:folder-handle";
 const FOLDER_NAME_KEY = "bharatscan:folder-name";
@@ -310,18 +310,36 @@ export function DataContextProvider({ children }: { children: ReactNode }) {
   }
 
   // Auto-load universe categories from server on first mount.
-  // Server is the primary store; localStorage is the fallback for the first
-  // render (initialised above via getCategories()). If the server has data it
-  // replaces the local state silently — no toast, no loading spinner, because
-  // the user already sees the localStorage snapshot immediately.
+  //
+  // Priority order:
+  //   1. User-uploaded categories persisted in app.db (Change #7) — always
+  //      shown when present; these contain the user's own watchlist names and
+  //      symbol lists from their CSV upload.
+  //   2. Server-derived categories built from the symbol master (Change #8) —
+  //      used as a fallback when the user has never uploaded a CSV.  Provides
+  //      Nifty 50 / 100 / 500, Futures, and NSE All out of the box once the
+  //      symbol master has been synced.
+  //   3. localStorage snapshot — already in state from the useState initialiser
+  //      above; visible immediately on first render before this effect resolves.
+  //
+  // No toast / spinner: the localStorage snapshot is already showing so the
+  // UI feels instant; the server update just silently replaces/enriches it.
   useEffect(() => {
     (async () => {
       try {
         const serverCats = await apiGetUniverseCategories();
         if (serverCats.length > 0) {
+          // User has uploaded categories — use them as the authoritative source.
           setCategoriesState(serverCats);
-          // Keep localStorage in sync so offline/cold starts still work.
-          setCategories(serverCats);
+          setCategories(serverCats); // keep localStorage in sync for cold starts
+          return;
+        }
+        // No user-uploaded categories yet — try server-derived fallback.
+        const derivedCats = await apiGetDerivedCategories();
+        if (derivedCats.length > 0) {
+          // Don't write derived cats to localStorage; they aren't user data and
+          // would be stale after any symbol master update.
+          setCategoriesState(derivedCats);
         }
       } catch {
         // Server might not be up yet (Replit cold start). localStorage
