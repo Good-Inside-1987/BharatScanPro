@@ -196,6 +196,25 @@ app.get("/api/market/status", (_req, res) => {
     }
   }
 
+  // ── Symbol-table counts ────────────────────────────────────────────────────
+  // All three queries are cheap covering-index reads (no table scan on a cold
+  // DB); ohlcv_daily uses the idx_ohlcv_daily index for the DISTINCT count.
+  const totalSymbols = (marketDb
+    .prepare(`SELECT COUNT(*) AS n FROM symbols WHERE is_delisted = 0`)
+    .get() as { n: number }).n;
+
+  const fyersInvalidSymbols = (marketDb
+    .prepare(`SELECT COUNT(*) AS n FROM symbols WHERE is_delisted = 0 AND fyers_eod_invalid = 1`)
+    .get() as { n: number }).n;
+
+  const symbolsWithEodData = (marketDb
+    .prepare(`SELECT COUNT(DISTINCT symbol) AS n FROM ohlcv_daily`)
+    .get() as { n: number }).n;
+
+  const nseHolidaysCount = (marketDb
+    .prepare(`SELECT COUNT(*) AS n FROM nse_holidays`)
+    .get() as { n: number }).n;
+
   res.json({
     environment: config.envLabel,
     databases: {
@@ -208,6 +227,12 @@ app.get("/api/market/status", (_req, res) => {
     backfill: getServiceStats(),
     historicalBackfill: getHistoricalBackfillStatus(),
     nightlySync: getNightlySyncStatus(),
+    symbolStats: {
+      total: totalSymbols,
+      fyersInvalid: fyersInvalidSymbols,
+      withEodData: symbolsWithEodData,
+    },
+    nseHolidaysCount,
   });
 });
 

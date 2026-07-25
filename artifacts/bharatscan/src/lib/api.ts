@@ -243,6 +243,14 @@ export interface ApiMarketStatus {
     options: ApiNightlySyncJobStatus;
     symbolMaster: ApiNightlySyncJobStatus;
   };
+  /** Counts derived from the symbols and ohlcv_daily tables. */
+  symbolStats?: {
+    total: number;
+    fyersInvalid: number;
+    withEodData: number;
+  };
+  /** Number of NSE market holidays loaded in the DB. */
+  nseHolidaysCount?: number;
 }
 
 export interface ApiHistoricalBackfillStatus {

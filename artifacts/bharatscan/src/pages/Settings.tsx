@@ -985,6 +985,95 @@ export default function Settings() {
                     </p>
                   )}
               </SectionCard>
+
+              {/* ── Database Status ─────────────────────────────────────── */}
+              <SectionCard title="Database Status" icon={HardDrive}>
+                <div className="py-3 space-y-3">
+                  {marketStatusLoading && !marketStatus && (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+
+                  {!marketStatusLoading && !marketStatus && (
+                    <p className="text-[10px] text-muted-foreground py-2">
+                      Could not load database status.
+                    </p>
+                  )}
+
+                  {marketStatus && (
+                    <>
+                      {/* Symbol counts */}
+                      {marketStatus.symbolStats && (
+                        <div className="space-y-1.5">
+                          <span className="block text-[9px] uppercase tracking-wide text-muted-foreground/50">
+                            Symbol Universe
+                          </span>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="rounded-md border border-border bg-muted/20 px-2.5 py-2 text-center">
+                              <p className="text-sm font-bold text-foreground leading-none">
+                                {marketStatus.symbolStats.total.toLocaleString()}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">Total</p>
+                            </div>
+                            <div className="rounded-md border border-border bg-muted/20 px-2.5 py-2 text-center">
+                              <p className={`text-sm font-bold leading-none ${marketStatus.symbolStats.withEodData > 0 ? "text-emerald-400" : "text-muted-foreground"}`}>
+                                {marketStatus.symbolStats.withEodData.toLocaleString()}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">With EOD data</p>
+                            </div>
+                            <div className="rounded-md border border-border bg-muted/20 px-2.5 py-2 text-center">
+                              <p className={`text-sm font-bold leading-none ${marketStatus.symbolStats.fyersInvalid > 0 ? "text-amber-400" : "text-muted-foreground"}`}>
+                                {marketStatus.symbolStats.fyersInvalid.toLocaleString()}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">Fyers invalid</p>
+                            </div>
+                          </div>
+                          {marketStatus.symbolStats.fyersInvalid > 0 && (
+                            <p className="text-[10px] text-muted-foreground">
+                              Invalid symbols are permanently excluded from nightly EOD sync.
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* DB file sizes */}
+                      <div className="space-y-1.5 pt-1 border-t border-border/30">
+                        <span className="block text-[9px] uppercase tracking-wide text-muted-foreground/50">
+                          Storage
+                        </span>
+                        <div className="grid grid-cols-3 gap-2 text-[10px]">
+                          {[
+                            { label: "app.db", size: marketStatus.databases.app_db_mb },
+                            { label: "market.db", size: marketStatus.databases.market_db_mb },
+                            { label: "live.db", size: marketStatus.databases.live_db_mb },
+                          ].map(({ label, size }) => (
+                            <div key={label} className="rounded-md border border-border bg-muted/20 px-2.5 py-2 text-center">
+                              <p className="text-sm font-bold text-foreground leading-none font-mono">
+                                {size} <span className="text-[9px] font-normal text-muted-foreground">MB</span>
+                              </p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">{label}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* NSE holidays */}
+                      {marketStatus.nseHolidaysCount !== undefined && (
+                        <div className="flex items-center justify-between text-[10px] pt-1 border-t border-border/30">
+                          <span className="text-muted-foreground">NSE holidays loaded</span>
+                          <span className={`font-mono ${marketStatus.nseHolidaysCount === 0 ? "text-amber-400" : "text-foreground"}`}>
+                            {marketStatus.nseHolidaysCount === 0
+                              ? "None — trading-day checks may be incorrect"
+                              : `${marketStatus.nseHolidaysCount} days`}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </SectionCard>
+
               <SectionCard title="CSV Format Settings" icon={Database}>
                 <SettingRow label="CSV Date Format" description="Date format in your NSE CSV files">
                   <span className="text-xs text-foreground bg-muted px-2 py-1 rounded font-mono">YYYY-MM-DD</span>
