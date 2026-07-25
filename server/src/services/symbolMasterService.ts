@@ -50,7 +50,7 @@ const NSE_INDICES: NseIndexCfg[] = [
   { name: "NIFTYSMALLCAP100", url: "https://nsearchives.nseindia.com/content/indices/ind_niftysmallcap100list.csv" },
   { name: "NIFTYSMALLCAP250", url: "https://nsearchives.nseindia.com/content/indices/ind_niftysmallcap250list.csv" },
   // ── Microcap ───────────────────────────────────────────────────────────
-  { name: "NIFTYMICROCAP250", url: "https://nsearchives.nseindia.com/content/indices/ind_niftymicrocap250list.csv" },
+  { name: "NIFTYMICROCAP250", url: "https://nsearchives.nseindia.com/content/indices/ind_niftymicrocap250_list.csv" },
   // ── Sectoral / thematic ────────────────────────────────────────────────
   { name: "NIFTYBANK",       url: "https://nsearchives.nseindia.com/content/indices/ind_niftybanklist.csv" },
   { name: "NIFTYIT",         url: "https://nsearchives.nseindia.com/content/indices/ind_niftyitlist.csv" },
