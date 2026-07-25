@@ -42,7 +42,7 @@ description: Findings from deep Electron/Fyers diagnosis session; what works, wh
 3. ✅ Fix empty-result / backfill coverage behavior — `updateProgress` now only called when `bars.length > 0` in both inline fetch and background worker; `InvalidSymbolError` added to re-throw list in inline path; background worker logs invalid-symbol chunks at warn+skip
 4. ✅ Improve EOD sync summaries — JobStats expanded (noData/invalidSymbol/failed/skippedBudget); runSymbolLoop collects samples silently, emits one structured end-of-loop block; transient errors capped at 10 inline lines; finishSyncLog writes breakdown into error_message; done-logs show all 5 counters
 5. ✅ Invalid-symbol persistence and skipping — `fyers_eod_invalid` column added to symbols table (safe ALTER TABLE migration); `markFyersInvalid()` helper updates it; `runSymbolLoop` accepts `onInvalidSymbol` callback; EOD query excludes flagged symbols; startup log shows how many were excluded
-6. ⬜ Resumable historical backfill job
+6. ✅ Resumable historical backfill job — DONE (committed d5851fa)
 7. ⬜ Database-backed universe categories (persist CSV import to SQLite)
 8. ⬜ Connect dropdown to backend universe API
 9. ⬜ Add tests and verify build
