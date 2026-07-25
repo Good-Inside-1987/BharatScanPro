@@ -500,6 +500,25 @@ function gapsFor(
   return computeGaps(covered, from, to);
 }
 
+/**
+ * Read-only coverage snapshot for durable jobs and diagnostics. This does not
+ * contact the broker or consume the daily request budget.
+ */
+export function getHistoricalCoverage(
+  symbol: string,
+  resolution: string,
+  from: string,
+  to: string
+): { covered: DateRange[]; gaps: DateRange[] } {
+  const row = marketDb
+    .prepare(
+      "SELECT covered_ranges FROM backfill_progress WHERE symbol = ? AND resolution = ?"
+    )
+    .get(symbol, resolution) as unknown as { covered_ranges: string } | undefined;
+  const covered = JSON.parse(row?.covered_ranges ?? "[]") as DateRange[];
+  return { covered, gaps: computeGaps(covered, from, to) };
+}
+
 // ── Chunk sizing ──────────────────────────────────────────────────────────────
 // Windows sized to match the adapter's own real per-request limits (see
 // fyers.ts maxDaysForResolution), with a small safety margin. The adapter
@@ -712,6 +731,54 @@ export async function getHistoricalBars(
   const bars = queryBars(symbol, resolution, fromDate, toDate);
   storeBarsInCache(cacheKey, bars);
   return bars;
+}
+
+/**
+ * Fetch exactly one durable backfill chunk.
+ *
+ * Unlike getHistoricalBars(), this never enqueues additional work in the
+ * process-local queue. Historical backfill owns its own persisted task ledger,
+ * so one call maps to one persisted task and can be resumed safely after a
+ * restart.
+ */
+export async function fetchHistoricalChunk(
+  symbol: string,
+  resolution: string,
+  fromDate: string,
+  toDate: string,
+  onRequestConsumed?: () => void
+): Promise<Bar[]> {
+  const adapter = await getAuthenticatedAdapter();
+  if (!adapter) throw noAdapterReason();
+  if (!consumeBudget()) {
+    throw new RateLimitError(
+      "Daily request budget exhausted; historical backfill is paused until the next IST day.",
+      60_000
+    );
+  }
+  onRequestConsumed?.();
+
+  return throttle(async () => {
+    try {
+      const bars = await adapter.getHistoricalData(symbol, resolution, fromDate, toDate);
+      upsertBars(symbol, resolution, bars);
+      if (bars.length > 0) {
+        updateProgress(symbol, resolution, fromDate, toDate);
+      }
+      return bars;
+    } catch (err) {
+      if (
+        err instanceof AuthenticationError ||
+        err instanceof SessionExpiredError ||
+        err instanceof RateLimitError ||
+        err instanceof BrokerUnavailableError ||
+        err instanceof InvalidSymbolError
+      ) {
+        throw err;
+      }
+      classifyAdapterError(err);
+    }
+  });
 }
 
 /**

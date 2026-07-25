@@ -21,6 +21,13 @@ import alertsRouter from "./routes/alerts.js";
 import paperTradingRouter from "./routes/paperTrading.js";
 import { getServiceStats } from "./services/marketDataService.js";
 import { getNightlySyncStatus } from "./services/syncJobs.js";
+import {
+  getHistoricalBackfillStatus,
+  pauseHistoricalBackfill,
+  resumeHistoricalBackfillOnStartup,
+  resumeHistoricalBackfill,
+  startHistoricalBackfill,
+} from "./services/historicalBackfill.js";
 import brokerConnectionsRouter from "./routes/brokerConnections.js";
 import marketDataRouter from "./routes/marketData.js";
 import symbolsRouter from "./routes/symbols.js";
@@ -197,6 +204,7 @@ app.get("/api/market/status", (_req, res) => {
     angel_connected: false, // will be updated when Angel API is integrated
     last_sync: null,        // will be populated from sync_log once Angel is running
     backfill: getServiceStats(),
+    historicalBackfill: getHistoricalBackfillStatus(),
     nightlySync: getNightlySyncStatus(),
   });
 });
@@ -216,6 +224,7 @@ if (process.env.NODE_ENV === "production") {
 
 app.listen(port, () => {
   console.log(`BharatScan server running on http://localhost:${port}`);
+  resumeHistoricalBackfillOnStartup();
   startScheduler();
 });
 

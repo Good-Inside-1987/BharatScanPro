@@ -201,12 +201,42 @@ export interface ApiMarketStatus {
     adaptersCached: number;
     symbols: ApiBackfillSymbolProgress[];
   };
+  historicalBackfill: ApiHistoricalBackfillStatus | null;
   nightlySync: {
     eod: ApiNightlySyncJobStatus;
     intraday: ApiNightlySyncJobStatus;
     options: ApiNightlySyncJobStatus;
     symbolMaster: ApiNightlySyncJobStatus;
   };
+}
+
+export interface ApiHistoricalBackfillStatus {
+  id: number;
+  status: "running" | "paused" | "completed";
+  pauseReason: string | null;
+  resolution: string;
+  fromDate: string;
+  toDate: string;
+  universe: string;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  updatedAt: string;
+  totalSymbols: number;
+  completedSymbols: number;
+  retryableSymbols: number;
+  totalTasks: number;
+  completedTasks: number;
+  noDataTasks: number;
+  invalidTasks: number;
+  failedTasks: number;
+  pendingTasks: number;
+  retryableTasks: number;
+  requestsUsed: number;
+  requestsRemainingToday: number;
+  earliestPersistedDate: string | null;
+  latestPersistedDate: string | null;
+  workerRunning: boolean;
 }
 
 export interface ApiQuoteCacheStats {
@@ -227,6 +257,24 @@ export const apiResetQuoteCacheStats = () =>
 
 export const apiGetMarketStatus = () =>
   request<ApiMarketStatus>("/market/status");
+
+export const apiStartHistoricalBackfill = () =>
+  request<{ backfill: ApiHistoricalBackfillStatus | null }>("/market-data/backfill/historical/start", {
+    method: "POST",
+    body: "{}",
+  });
+
+export const apiPauseHistoricalBackfill = () =>
+  request<{ backfill: ApiHistoricalBackfillStatus | null }>("/market-data/backfill/historical/pause", {
+    method: "POST",
+    body: "{}",
+  });
+
+export const apiResumeHistoricalBackfill = () =>
+  request<{ backfill: ApiHistoricalBackfillStatus | null }>("/market-data/backfill/historical/resume", {
+    method: "POST",
+    body: "{}",
+  });
 
 // ── Options data (broker-backed) ──────────────────────────────────────────────
 

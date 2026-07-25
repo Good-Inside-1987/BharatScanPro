@@ -14,6 +14,12 @@ import { getAtmTrackerStatus } from "../services/liveOptionsTracker.js";
 import { runEodSyncJob, runIntradaySyncJob, todayIST } from "../services/syncJobs.js";
 import { runOptionsSyncJob } from "../services/optionsDataService.js";
 import { runPeriodicCatchUpCheck, runStartupCatchUp, getCatchUpStatus } from "../services/catchUpScheduler.js";
+import {
+  getHistoricalBackfillStatus,
+  pauseHistoricalBackfill,
+  resumeHistoricalBackfill,
+  startHistoricalBackfill,
+} from "../services/historicalBackfill.js";
 import { isTradingDay } from "../services/tradingCalendar.js";
 import {
   AuthenticationError,
@@ -595,6 +601,44 @@ router.get("/scanner/options-universe-data", (req: Request, res: Response) => {
 
 router.get("/scheduler-status", (_req: Request, res: Response) => {
   res.json(getSchedulerStatus());
+});
+
+/**
+ * Durable historical EOD backfill controls. These routes only create/resume/
+ * pause the persisted job; the worker itself runs asynchronously and shares
+ * the same broker budget as nightly syncs.
+ */
+router.get("/backfill/historical/status", (_req: Request, res: Response) => {
+  res.json({ backfill: getHistoricalBackfillStatus() });
+});
+
+router.post("/backfill/historical/start", async (_req: Request, res: Response) => {
+  try {
+    const broker = hasConnectedBroker();
+    if (!broker) {
+      res.status(503).json({ error: "No broker connected", code: "NO_BROKER" });
+      return;
+    }
+    res.status(202).json({ backfill: startHistoricalBackfill() });
+  } catch (err) {
+    console.error(
+      "[marketData] /backfill/historical/start error:",
+      err instanceof Error ? err.message : err
+    );
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not start historical backfill" });
+  }
+});
+
+router.post("/backfill/historical/pause", (_req: Request, res: Response) => {
+  res.json({ backfill: pauseHistoricalBackfill() });
+});
+
+router.post("/backfill/historical/resume", (_req: Request, res: Response) => {
+  if (!hasConnectedBroker()) {
+    res.status(503).json({ error: "No broker connected", code: "NO_BROKER" });
+    return;
+  }
+  res.status(202).json({ backfill: resumeHistoricalBackfill() });
 });
 
 /**

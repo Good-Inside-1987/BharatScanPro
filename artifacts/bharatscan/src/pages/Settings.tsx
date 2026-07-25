@@ -17,6 +17,7 @@ import {
   apiListPortfolios, apiDeletePortfolio,
   apiListScannerDashboards, apiDeleteScannerDashboard,
   apiGetSchedulerStatus, apiGetMarketStatus, apiGetQuoteCacheStats, apiResetQuoteCacheStats,
+  apiStartHistoricalBackfill, apiPauseHistoricalBackfill, apiResumeHistoricalBackfill,
   apiRefreshSymbolMaster,
   type ApiScan, type ApiSchedulerStatus, type ApiMarketStatus, type ApiQuoteCacheStats,
 } from "@/lib/api";
@@ -244,6 +245,7 @@ export default function Settings() {
   // ── Backfill dashboard ─────────────────────────────────────────────────────
   const [marketStatus, setMarketStatus] = useState<ApiMarketStatus | null>(null);
   const [marketStatusLoading, setMarketStatusLoading] = useState(false);
+  const [historicalBackfillBusy, setHistoricalBackfillBusy] = useState(false);
 
   // ── Live quote cache diagnostics ────────────────────────────────────────────
   const [quoteCacheStats, setQuoteCacheStats] = useState<ApiQuoteCacheStats | null>(null);
@@ -509,6 +511,35 @@ export default function Settings() {
       setSymbolRefreshing(false);
     }
   }, []);
+
+  const updateHistoricalBackfill = useCallback(
+    async (action: "start" | "pause" | "resume") => {
+      setHistoricalBackfillBusy(true);
+      try {
+        const result =
+          action === "start"
+            ? await apiStartHistoricalBackfill()
+            : action === "pause"
+            ? await apiPauseHistoricalBackfill()
+            : await apiResumeHistoricalBackfill();
+        setMarketStatus((previous) =>
+          previous ? { ...previous, historicalBackfill: result.backfill } : previous
+        );
+        toast.success(
+          action === "start"
+            ? "Historical backfill started"
+            : action === "pause"
+            ? "Historical backfill paused"
+            : "Historical backfill resumed"
+        );
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Historical backfill action failed");
+      } finally {
+        setHistoricalBackfillBusy(false);
+      }
+    },
+    []
+  );
 
   // ── Broker: add ───────────────────────────────────────────────────────────
   const handleAddBroker = useCallback(async () => {
@@ -1597,6 +1628,159 @@ export default function Settings() {
                         </span>
                       </div>
                     </div>
+
+                    {(() => {
+                      const backfill = marketStatus.historicalBackfill;
+                      const statusLabel = !backfill
+                        ? "Not started"
+                        : backfill.status === "running"
+                        ? "Running"
+                        : backfill.status === "completed"
+                        ? "Completed"
+                        : backfill.pauseReason === "daily_budget"
+                        ? "Paused — daily budget exhausted"
+                        : backfill.pauseReason === "session_expired"
+                        ? "Paused — reconnect broker"
+                        : backfill.pauseReason === "no_broker"
+                        ? "Paused — no broker connected"
+                        : backfill.pauseReason === "retryable_failures"
+                        ? "Paused — retryable failures"
+                        : "Paused";
+                      const progress =
+                        backfill && backfill.totalTasks > 0
+                          ? Math.min(
+                              100,
+                              ((backfill.completedTasks + backfill.invalidTasks) /
+                                backfill.totalTasks) *
+                                100
+                            )
+                          : 0;
+                      return (
+                        <div className="pt-2 border-t border-border/30 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <span className="block text-[9px] uppercase tracking-wide text-muted-foreground/50 mb-0.5">
+                                Historical EOD Backfill
+                              </span>
+                              <span
+                                className={`text-[10px] font-medium ${
+                                  !backfill || backfill.status === "paused"
+                                    ? "text-amber-400"
+                                    : backfill.status === "completed"
+                                    ? "text-emerald-400"
+                                    : "text-sky-400"
+                                }`}
+                              >
+                                {statusLabel}
+                              </span>
+                            </div>
+                            {!backfill || backfill.status === "completed" ? (
+                              <Button
+                                size="sm"
+                                className="h-6 text-[10px] px-2"
+                                onClick={() => updateHistoricalBackfill("start")}
+                                disabled={historicalBackfillBusy}
+                              >
+                                {historicalBackfillBusy ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  "Start"
+                                )}
+                              </Button>
+                            ) : backfill.status === "running" ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-6 text-[10px] px-2"
+                                onClick={() => updateHistoricalBackfill("pause")}
+                                disabled={historicalBackfillBusy}
+                              >
+                                Pause
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                className="h-6 text-[10px] px-2"
+                                onClick={() => updateHistoricalBackfill("resume")}
+                                disabled={historicalBackfillBusy}
+                              >
+                                {historicalBackfillBusy ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  "Resume"
+                                )}
+                              </Button>
+                            )}
+                          </div>
+                          {backfill && (
+                            <>
+                              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                                <span>
+                                  {backfill.fromDate} → {backfill.toDate} · {backfill.universe}
+                                </span>
+                                <span className="font-mono text-foreground">
+                                  {Math.round(progress)}%
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-sky-400 transition-all"
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                              <div className="grid grid-cols-3 gap-2 text-[10px] text-muted-foreground">
+                                <div>
+                                  <span className="block text-[9px] uppercase tracking-wide text-muted-foreground/50 mb-0.5">
+                                    Symbols
+                                  </span>
+                                  <span className="text-foreground font-mono">
+                                    {backfill.completedSymbols} / {backfill.totalSymbols}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="block text-[9px] uppercase tracking-wide text-muted-foreground/50 mb-0.5">
+                                    Requests
+                                  </span>
+                                  <span className="text-foreground font-mono">
+                                    {backfill.requestsUsed}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="block text-[9px] uppercase tracking-wide text-muted-foreground/50 mb-0.5">
+                                    Retryable
+                                  </span>
+                                  <span
+                                    className={
+                                      backfill.retryableTasks > 0
+                                        ? "text-amber-400 font-mono"
+                                        : "text-foreground font-mono"
+                                    }
+                                  >
+                                    {backfill.retryableTasks}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                                <span>Persisted range</span>
+                                <span className="font-mono text-foreground">
+                                  {backfill.earliestPersistedDate ?? "—"} →{" "}
+                                  {backfill.latestPersistedDate ?? "—"}
+                                </span>
+                              </div>
+                              {backfill.pauseReason && (
+                                <p className="text-[10px] text-amber-400">
+                                  {backfill.pauseReason === "daily_budget"
+                                    ? "Available again after the daily budget resets."
+                                    : backfill.pauseReason === "retryable_failures"
+                                    ? "Resume to retry chunks with no data or temporary errors."
+                                    : "Resume after reconnecting or correcting the broker session."}
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     <div className="pt-1 border-t border-border/30">
                       <span className="block text-[9px] uppercase tracking-wide text-muted-foreground/50 mb-1">

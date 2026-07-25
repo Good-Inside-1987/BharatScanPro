@@ -189,6 +189,50 @@ export function initMarketDb(db: DatabaseSync): void {
       count INTEGER NOT NULL DEFAULT 0
     );
 
+    -- ── Durable historical EOD backfill ────────────────────────────
+    -- Unlike the short-lived in-memory cache queue, these rows are the
+    -- authoritative job ledger. A process restart can reset leased rows to
+    -- pending and continue from the first uncovered chunk.
+    CREATE TABLE IF NOT EXISTS historical_backfill_jobs (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_name       TEXT NOT NULL,
+      resolution     TEXT NOT NULL,
+      from_date      TEXT NOT NULL,
+      to_date        TEXT NOT NULL,
+      universe       TEXT NOT NULL,
+      status         TEXT NOT NULL,
+      pause_reason   TEXT,
+      total_tasks    INTEGER NOT NULL DEFAULT 0,
+      requests_used  INTEGER NOT NULL DEFAULT 0,
+      created_at     TEXT NOT NULL,
+      started_at     TEXT,
+      finished_at    TEXT,
+      updated_at     TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_historical_backfill_jobs_status
+      ON historical_backfill_jobs(job_name, status, updated_at);
+
+    CREATE TABLE IF NOT EXISTS historical_backfill_tasks (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id         INTEGER NOT NULL REFERENCES historical_backfill_jobs(id) ON DELETE CASCADE,
+      symbol         TEXT NOT NULL,
+      fyers_symbol   TEXT NOT NULL,
+      resolution     TEXT NOT NULL,
+      from_date      TEXT NOT NULL,
+      to_date        TEXT NOT NULL,
+      status         TEXT NOT NULL DEFAULT 'pending',
+      attempts       INTEGER NOT NULL DEFAULT 0,
+      bars_received  INTEGER NOT NULL DEFAULT 0,
+      error_code     TEXT,
+      error_message  TEXT,
+      updated_at     TEXT NOT NULL,
+      UNIQUE(job_id, symbol, resolution, from_date, to_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_historical_backfill_tasks_next
+      ON historical_backfill_tasks(job_id, status, id);
+    CREATE INDEX IF NOT EXISTS idx_historical_backfill_tasks_symbol
+      ON historical_backfill_tasks(job_id, symbol, status);
+
     -- One-row-per-day cache of the resolved nearest option expiry for each
     -- underlying. The correct expiry for a given underlying does not change
     -- within a trading day, so initAtmOptionSubscriptions() checks this
