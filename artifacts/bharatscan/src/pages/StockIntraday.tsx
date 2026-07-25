@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   Database,
+  Minus,
   Plus,
   RefreshCw,
+  Settings2,
   Table2,
   Wifi,
 } from "lucide-react";
@@ -12,9 +14,11 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { useData } from "@/context/DataContext";
 import { apiGetMarketQuotes, type ApiLiveQuote } from "@/lib/api";
@@ -52,10 +56,33 @@ function isSamePrice(a: number, b: number): boolean {
 type ConditionKey =
   | "open-low"
   | "open-high"
+  | "open-close"
   | "ltp-open"
+  | "ltp-low"
+  | "ltp-high"
   | "ltp-close"
+  | "high-open"
+  | "low-open"
   | "high-close"
-  | "low-close";
+  | "low-close"
+  | "high-low"
+  | "volume-active";
+
+type MetricKey = "open" | "high" | "low" | "close" | "ltp" | "volume";
+type ComparisonOperator = "=" | ">" | "<" | ">=" | "<=" | "!=";
+
+interface CustomCondition {
+  left: MetricKey;
+  operator: ComparisonOperator;
+  right: MetricKey;
+}
+
+interface ConditionColumn {
+  id: number;
+  key: ConditionKey | "custom";
+  custom?: CustomCondition;
+  removable: boolean;
+}
 
 interface ConditionDefinition {
   key: ConditionKey;
@@ -63,14 +90,82 @@ interface ConditionDefinition {
   matches: (quote: ApiLiveQuote) => boolean;
 }
 
+const METRIC_LABELS: Record<MetricKey, string> = {
+  open: "OPEN",
+  high: "HIGH",
+  low: "LOW",
+  close: "PRV CLOSE",
+  ltp: "LTP",
+  volume: "VOLUME",
+};
+
+const METRIC_OPTIONS: MetricKey[] = ["open", "high", "low", "close", "ltp", "volume"];
+
+const OPERATOR_LABELS: Record<ComparisonOperator, string> = {
+  "=": "=",
+  ">": ">",
+  "<": "<",
+  ">=": "≥",
+  "<=": "≤",
+  "!=": "≠",
+};
+
+const OPERATOR_OPTIONS: ComparisonOperator[] = ["=", ">", "<", ">=", "<=", "!="];
+
+function metricValue(quote: ApiLiveQuote, metric: MetricKey): number {
+  return metric === "close" ? quote.close : quote[metric];
+}
+
+function compareValues(left: number, operator: ComparisonOperator, right: number): boolean {
+  if (!Number.isFinite(left) || !Number.isFinite(right) || left === 0 || right === 0) return false;
+  switch (operator) {
+    case "=": return isSamePrice(left, right);
+    case ">": return left > right;
+    case "<": return left < right;
+    case ">=": return left >= right;
+    case "<=": return left <= right;
+    case "!=": return !isSamePrice(left, right);
+  }
+}
+
 const CONDITION_OPTIONS: ConditionDefinition[] = [
   { key: "open-low", label: "OPEN=LOW", matches: (quote) => isSamePrice(quote.open, quote.low) },
   { key: "open-high", label: "OPEN=HIGH", matches: (quote) => isSamePrice(quote.open, quote.high) },
+  { key: "open-close", label: "OPEN=PRV CLOSE", matches: (quote) => isSamePrice(quote.open, quote.close) },
   { key: "ltp-open", label: "LTP>OPEN", matches: (quote) => quote.ltp > quote.open && quote.ltp > 0 && quote.open > 0 },
+  { key: "ltp-low", label: "LTP>LOW", matches: (quote) => quote.ltp > quote.low && quote.ltp > 0 && quote.low > 0 },
+  { key: "ltp-high", label: "LTP>HIGH", matches: (quote) => quote.ltp > quote.high && quote.ltp > 0 && quote.high > 0 },
   { key: "ltp-close", label: "LTP>PRV CLOSE", matches: (quote) => quote.ltp > quote.close && quote.ltp > 0 && quote.close > 0 },
+  { key: "high-open", label: "HIGH>OPEN", matches: (quote) => quote.high > quote.open && quote.high > 0 && quote.open > 0 },
+  { key: "low-open", label: "LOW<OPEN", matches: (quote) => quote.low < quote.open && quote.low > 0 && quote.open > 0 },
   { key: "high-close", label: "HIGH>PRV CLOSE", matches: (quote) => quote.high > quote.close && quote.high > 0 && quote.close > 0 },
   { key: "low-close", label: "LOW<PRV CLOSE", matches: (quote) => quote.low < quote.close && quote.low > 0 && quote.close > 0 },
+  { key: "high-low", label: "HIGH>LOW", matches: (quote) => quote.high > quote.low && quote.high > 0 && quote.low > 0 },
+  { key: "volume-active", label: "VOLUME>0", matches: (quote) => quote.volume > 0 },
 ];
+
+const DEFAULT_CUSTOM_CONDITION: CustomCondition = {
+  left: "open",
+  operator: ">",
+  right: "close",
+};
+
+function conditionLabel(column: ConditionColumn): string {
+  if (column.key === "custom") {
+    const custom = column.custom ?? DEFAULT_CUSTOM_CONDITION;
+    return `${METRIC_LABELS[custom.left]}${OPERATOR_LABELS[custom.operator]}${METRIC_LABELS[custom.right]}`;
+  }
+  return CONDITION_OPTIONS.find((condition) => condition.key === column.key)?.label ?? "Condition";
+}
+
+function conditionMatches(column: ConditionColumn, quote?: ApiLiveQuote): boolean | null {
+  if (!quote) return null;
+  if (column.key === "custom") {
+    const custom = column.custom ?? DEFAULT_CUSTOM_CONDITION;
+    return compareValues(metricValue(quote, custom.left), custom.operator, metricValue(quote, custom.right));
+  }
+  return CONDITION_OPTIONS.find((condition) => condition.key === column.key)?.matches(quote) ?? false;
+}
 
 function CellValue({
   children,
@@ -111,6 +206,115 @@ function TableHeader({
   );
 }
 
+function ConditionHeader({
+  column,
+  onChange,
+  onCustomChange,
+  onRemove,
+}: {
+  column: ConditionColumn;
+  onChange: (key: ConditionKey | "custom") => void;
+  onCustomChange: (custom: CustomCondition) => void;
+  onRemove: () => void;
+}) {
+  const custom = column.custom ?? DEFAULT_CUSTOM_CONDITION;
+
+  return (
+    <th className="sticky top-0 z-[1] w-[116px] border-b border-r border-border/60 px-1 py-1 last:border-r-0">
+      <div className="flex items-center justify-center gap-0.5">
+        <Select value={column.key} onValueChange={onChange}>
+          <SelectTrigger className="h-5 min-w-0 flex-1 gap-0.5 border-0 bg-transparent px-1 text-[8px] font-bold uppercase tracking-wide text-muted-foreground shadow-none focus:ring-0">
+            <SelectValue>{conditionLabel(column)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {CONDITION_OPTIONS.map((condition) => (
+              <SelectItem key={condition.key} value={condition.key} className="text-xs">
+                {condition.label}
+              </SelectItem>
+            ))}
+            <SelectSeparator />
+            <SelectItem value="custom" className="text-xs">Custom condition…</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {column.key === "custom" && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Edit custom condition"
+                title="Edit custom condition"
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-primary/15 hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+              >
+                <Settings2 className="h-3 w-3" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="center" className="w-64 space-y-3 p-3">
+              <div>
+                <p className="text-xs font-semibold text-foreground">Custom condition</p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">Compare any two live fields.</p>
+              </div>
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
+                <Select
+                  value={custom.left}
+                  onValueChange={(value) => onCustomChange({ ...custom, left: value as MetricKey })}
+                >
+                  <SelectTrigger className="h-7 px-2 text-[10px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {METRIC_OPTIONS.map((metric) => (
+                      <SelectItem key={metric} value={metric} className="text-xs">{METRIC_LABELS[metric]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={custom.operator}
+                  onValueChange={(value) => onCustomChange({ ...custom, operator: value as ComparisonOperator })}
+                >
+                  <SelectTrigger className="h-7 w-12 px-2 text-[10px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {OPERATOR_OPTIONS.map((operator) => (
+                      <SelectItem key={operator} value={operator} className="text-xs">{OPERATOR_LABELS[operator]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={custom.right}
+                  onValueChange={(value) => onCustomChange({ ...custom, right: value as MetricKey })}
+                >
+                  <SelectTrigger className="h-7 px-2 text-[10px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {METRIC_OPTIONS.map((metric) => (
+                      <SelectItem key={metric} value={metric} className="text-xs">{METRIC_LABELS[metric]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
+
+        {column.removable && (
+          <button
+            type="button"
+            aria-label={`Remove ${conditionLabel(column)} condition`}
+            title="Remove condition"
+            onClick={onRemove}
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-destructive/15 hover:text-destructive focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-destructive"
+          >
+            <Minus className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+    </th>
+  );
+}
+
 function quoteTicker(quote: ApiLiveQuote): string {
   const base = quote.symbol.includes(":") ? quote.symbol.split(":").pop() ?? quote.symbol : quote.symbol;
   return base.replace(/-EQ$/i, "").toUpperCase();
@@ -119,7 +323,11 @@ function quoteTicker(quote: ApiLiveQuote): string {
 export default function StockIntraday() {
   const { categories } = useData();
   const [selectedUniverseId, setSelectedUniverseId] = useState("");
-  const [conditionColumns, setConditionColumns] = useState<ConditionKey[]>(["open-low", "open-high"]);
+  const [nextConditionId, setNextConditionId] = useState(3);
+  const [conditionColumns, setConditionColumns] = useState<ConditionColumn[]>([
+    { id: 1, key: "open-low", removable: false },
+    { id: 2, key: "open-high", removable: false },
+  ]);
   const [quotes, setQuotes] = useState<Record<string, ApiLiveQuote>>({});
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -198,8 +406,28 @@ export default function StockIntraday() {
   const addConditionColumn = () => {
     setConditionColumns((current) => [
       ...current,
-      CONDITION_OPTIONS[current.length % CONDITION_OPTIONS.length].key,
+      {
+        id: nextConditionId,
+        key: CONDITION_OPTIONS[current.length % CONDITION_OPTIONS.length].key,
+        removable: true,
+      },
     ]);
+    setNextConditionId((current) => current + 1);
+  };
+  const updateCondition = (id: number, key: ConditionKey | "custom") => {
+    setConditionColumns((current) => current.map((column) => (
+      column.id === id
+        ? { ...column, key, custom: key === "custom" ? (column.custom ?? DEFAULT_CUSTOM_CONDITION) : undefined }
+        : column
+    )));
+  };
+  const updateCustomCondition = (id: number, custom: CustomCondition) => {
+    setConditionColumns((current) => current.map((column) => (
+      column.id === id ? { ...column, key: "custom", custom } : column
+    )));
+  };
+  const removeCondition = (id: number) => {
+    setConditionColumns((current) => current.filter((column) => column.id !== id));
   };
 
   return (
@@ -298,14 +526,14 @@ export default function StockIntraday() {
                        <TableHeader label="Low" className="w-[82px]" />
                        <TableHeader label="LTP" className="w-[82px]" />
                        <TableHeader label="Volume" className="w-[92px]" />
-                       {conditionColumns.map((conditionKey, index) => {
-                         const condition = CONDITION_OPTIONS.find((option) => option.key === conditionKey) ?? CONDITION_OPTIONS[0];
+                       {conditionColumns.map((column) => {
                          return (
-                           <TableHeader
-                             key={`${conditionKey}-${index}`}
-                             label={condition.label}
-                             align="center"
-                             className="w-[100px]"
+                           <ConditionHeader
+                             key={column.id}
+                             column={column}
+                             onChange={(key) => updateCondition(column.id, key)}
+                             onCustomChange={(custom) => updateCustomCondition(column.id, custom)}
+                             onRemove={() => removeCondition(column.id)}
                            />
                          );
                        })}
@@ -323,9 +551,7 @@ export default function StockIntraday() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map(({ ticker, quote }, index) => {
-                      const openLow = quote ? isSamePrice(quote.open, quote.low) : false;
-                      const openHigh = quote ? isSamePrice(quote.open, quote.high) : false;
+                     {rows.map(({ ticker, quote }, index) => {
                       return (
                         <tr
                           key={ticker}
@@ -354,12 +580,11 @@ export default function StockIntraday() {
                           <td className="border-r border-border/35 px-2 py-1.5 text-right text-xs font-medium tabular-nums text-muted-foreground last:border-r-0">
                             <CellValue className="text-muted-foreground">{formatVolume(quote?.volume)}</CellValue>
                           </td>
-                          {conditionColumns.map((conditionKey, conditionIndex) => {
-                            const condition = CONDITION_OPTIONS.find((option) => option.key === conditionKey) ?? CONDITION_OPTIONS[0];
-                            const matches = quote ? condition.matches(quote) : null;
+                          {conditionColumns.map((column) => {
+                            const matches = conditionMatches(column, quote);
                             return (
                               <td
-                                key={`${conditionKey}-${conditionIndex}`}
+                                key={column.id}
                                 className="border-r border-border/35 px-2 py-1.5 text-center text-[10px] font-bold last:border-r-0"
                               >
                                 {matches === true ? (
