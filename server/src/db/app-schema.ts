@@ -177,6 +177,18 @@ export function initAppDb(db: DatabaseSync): void {
       updated_at TEXT NOT NULL
     );
 
+    -- ── Universe categories (persisted from "All Watchlist" CSV upload) ──
+    -- Full-replace on every upload: upload handler DELETEs all rows then
+    -- INSERTs fresh ones in a single transaction, so the set is always
+    -- consistent. sort_order preserves the column order from the CSV.
+    CREATE TABLE IF NOT EXISTS universe_categories (
+      id         TEXT PRIMARY KEY,
+      name       TEXT NOT NULL,
+      symbols    TEXT NOT NULL DEFAULT '[]',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL
+    );
+
     -- ── Broker Connections ────────────────────────────────────────────
     CREATE TABLE IF NOT EXISTS broker_connections (
       id                 TEXT PRIMARY KEY,

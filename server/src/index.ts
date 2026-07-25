@@ -31,6 +31,7 @@ import {
 import brokerConnectionsRouter from "./routes/brokerConnections.js";
 import marketDataRouter from "./routes/marketData.js";
 import symbolsRouter from "./routes/symbols.js";
+import universeRouter from "./routes/universe.js";
 import { startScheduler } from "./services/scheduler.js";
 
 void appDb;
@@ -170,6 +171,7 @@ app.use("/api/paper-trading", paperTradingRouter);
 app.use("/api/broker-connections", brokerConnectionsRouter);
 app.use("/api/market-data", marketDataRouter);
 app.use("/api/symbols", symbolsRouter);
+app.use("/api/universe", universeRouter);
 
 // Protected endpoint — only reachable with a valid session token.
 // Used by the frontend's checkAuth() to confirm a stored token is still good.

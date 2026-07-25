@@ -11,6 +11,7 @@ import {
 import { parseOptionsCsv, parseOptionsApiRows, indexOptions, type OptionsDataset, type ApiOptionRow, type FuturesBar } from "@/lib/options";
 import { toast } from "sonner";
 import { get, set, del } from "idb-keyval";
+import { apiGetUniverseCategories, apiSaveUniverseCategories } from "@/lib/api";
 
 const FOLDER_KEY = "bharatscan:folder-handle";
 const FOLDER_NAME_KEY = "bharatscan:folder-name";
@@ -308,6 +309,28 @@ export function DataContextProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Auto-load universe categories from server on first mount.
+  // Server is the primary store; localStorage is the fallback for the first
+  // render (initialised above via getCategories()). If the server has data it
+  // replaces the local state silently — no toast, no loading spinner, because
+  // the user already sees the localStorage snapshot immediately.
+  useEffect(() => {
+    (async () => {
+      try {
+        const serverCats = await apiGetUniverseCategories();
+        if (serverCats.length > 0) {
+          setCategoriesState(serverCats);
+          // Keep localStorage in sync so offline/cold starts still work.
+          setCategories(serverCats);
+        }
+      } catch {
+        // Server might not be up yet (Replit cold start). localStorage
+        // snapshot is already in state, so nothing visible changes.
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally runs once on mount
+
   // Auto-load from local DB on first mount when no data has been loaded yet.
   // Non-blocking: shows a dismiss-able loading toast while fetching.
   // Falls back silently if the DB is empty (nothing synced yet).
@@ -369,6 +392,7 @@ export function DataContextProvider({ children }: { children: ReactNode }) {
         toast.error("No category headers found — make sure the first row has names in double-quotes");
         return;
       }
+      // 1. Write to localStorage immediately so the UI is instant.
       setCategories(r.categories);
       setCategoriesState(r.categories);
       setHolidays(r.holidays);
@@ -377,6 +401,14 @@ export function DataContextProvider({ children }: { children: ReactNode }) {
       setQuotesState(r.quotes);
       setLotSizesStore(r.lotSizes);
       setLotSizesState(r.lotSizes);
+
+      // 2. Persist categories to the server (app.db) so they survive across
+      //    browser profiles, Electron restarts, and localStorage clears.
+      //    Fire-and-forget: a failure here doesn't break the local workflow.
+      apiSaveUniverseCategories(r.categories).catch((err: unknown) => {
+        console.warn("[DataContext] Failed to persist universe categories to server:", err instanceof Error ? err.message : err);
+      });
+
       const summary = r.categories.map((c) => `${c.name} ${c.symbols.length}`).join(" · ");
       const hPart = r.holidays.length ? ` · ${r.holidays.length} holidays` : "";
       const qPart = r.quotes.length ? ` · ${r.quotes.length} quotes` : "";

@@ -82,6 +82,32 @@ export const apiSaveSetting = (key: string, value: string) =>
 export const apiHealth = () =>
   request<{ status: string; db_version: string }>("/health");
 
+// ── Universe categories (persisted from All Watchlist CSV upload) ────────────
+
+export interface ApiUniverseCategory {
+  id: string;
+  name: string;
+  symbols: string[];
+}
+
+/** Fetch all persisted universe categories from the server. Returns an empty
+ *  array when none have been uploaded yet (rather than throwing). */
+export const apiGetUniverseCategories = () =>
+  request<{ categories: ApiUniverseCategory[] }>("/universe/categories")
+    .then((r) => r.categories)
+    .catch((): ApiUniverseCategory[] => []);
+
+/** Full-replace all stored universe categories. Call after every CSV upload. */
+export const apiSaveUniverseCategories = (categories: ApiUniverseCategory[]) =>
+  request<{ ok: boolean; count: number }>("/universe/categories", {
+    method: "PUT",
+    body: JSON.stringify({ categories }),
+  });
+
+/** Remove all stored universe categories (e.g. "Clear watchlists"). */
+export const apiClearUniverseCategories = () =>
+  request<{ ok: boolean }>("/universe/categories", { method: "DELETE" });
+
 // ── Market data (broker-backed live/historical feed) ────────────────────────
 
 export interface ApiHistoryBar {
