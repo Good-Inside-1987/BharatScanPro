@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { BarChart2, TrendingUp, TrendingDown, Activity, Database, Search, ArrowUpDown, ChevronUp, ChevronDown, LineChart as LineChartIcon, Sliders, CandlestickChart, Link2 } from "lucide-react";
+import { BarChart2, TrendingUp, TrendingDown, Activity, Database, Search, ArrowUpDown, ChevronUp, ChevronDown, LineChart as LineChartIcon, Sliders, CandlestickChart, Link2, Table2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useData } from "@/context/DataContext";
 import type { OptionBar, OptionsDataset } from "@/lib/options";
 import OptionsSimulator from "./OptionsSimulator";
 import StockSimulator from "./StockSimulator";
 import OptionChainTab from "./OptionChain";
+import StockIntraday from "./StockIntraday";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -509,7 +510,7 @@ function OptionsAnalysisTab() {
 // ── Top-level page with tabs ───────────────────────────────────────────────────
 
 export default function OptionsPage() {
-  const [pageTab, setPageTab] = useState<"chain" | "simulator" | "stock-simulator" | "analysis">("simulator");
+  const [pageTab, setPageTab] = useState<"chain" | "simulator" | "stock-simulator" | "analysis" | "stock-intraday">("simulator");
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -520,11 +521,12 @@ export default function OptionsPage() {
           { key: "stock-simulator", label: "Stock Simulator",  icon: CandlestickChart  },
           { key: "chain",           label: "Option Chain",     icon: Link2             },
           { key: "analysis",        label: "Options Analysis", icon: BarChart2          },
+          { key: "stock-intraday",  label: "Stock Intraday",   icon: Table2             },
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             type="button"
-            onClick={() => setPageTab(key as "chain" | "simulator" | "stock-simulator" | "analysis")}
+            onClick={() => setPageTab(key as "chain" | "simulator" | "stock-simulator" | "analysis" | "stock-intraday")}
             className={`flex items-center gap-1.5 px-4 py-1 text-sm font-semibold border-b-2 -mb-px transition-colors ${
               pageTab === key
                 ? key === "chain"
@@ -544,6 +546,7 @@ export default function OptionsPage() {
       {/* Tab content */}
       {pageTab === "chain"           && <OptionChainTab />}
       {pageTab === "analysis"        && <OptionsAnalysisTab />}
+      {pageTab === "stock-intraday"  && <StockIntraday />}
       {pageTab === "simulator"       && <OptionsSimulator />}
       {pageTab === "stock-simulator" && <StockSimulator />}
     </div>

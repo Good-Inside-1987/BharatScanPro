@@ -1,0 +1,35 @@
+Last login: Sat Jul 25 20:55:57 on console
+maheshsundriyal@Maheshs-Mac-mini ~ % cd ~/BharatScanPro/BharatScanPro
+
+maheshsundriyal@Maheshs-Mac-mini BharatScanPro % pnpm run electron:dev
+$ concurrently --kill-others-on-fail --names "vite,electron" -c "cyan,magenta" "pnpm --filter @workspace/bharatscan run dev" "pnpm --dir electron run dev"
+[electron] $ electron .
+[vite] $ vite --config vite.config.ts --host 0.0.0.0
+[vite] 
+[vite]   VITE v7.3.2  ready in 161 ms
+[vite] 
+[vite]   ➜  Local:   http://localhost:5173/
+[vite]   ➜  Network: http://192.168.29.176:5173/
+[electron] [electron] Data directory: /Users/maheshsundriyal/Library/Application Support/BharatScan/bharatscan-data
+[electron] [electron] isDev: true — loading from http://localhost:5173
+[electron] [server] ◇ injected env (4) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+[electron] [server] [migrate] No bharatscan.db found — skipping migration
+[electron] [server] BharatScan server running on http://localhost:3001
+[electron] [server] [syncJobs] Cleaned up 1 orphaned 'running' sync_log row(s) from previous process
+[electron] [server] [catchUpScheduler] Startup catch-up: 3 missed job/day runs to process
+[electron] [server] [catchUpScheduler] Catching up eod_sync for 2026-07-24 ...
+[electron] [server] [syncJobs] EOD sync starting — 2963 symbols for 2026-07-24 (universe: all_nse, 1 known-invalid excluded)
+[electron] [electron] ✓ Express server ready at http://localhost:3001/api/health
+[electron] [electron] ✓ Vite dev server ready at localhost: 5173
+[electron] [server] [marketData] /scanner/universe-data — 2917 symbols, 2974 bars (2024-07-25 → 2026-07-25)
+[electron] [server] [syncJobs] Failed to sync ABNINT @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync AMIABLE @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync ARIHANTACA @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync ASCOM @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync AVATAR @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync AVSL @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync BDR @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync BIRDYS @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync BOSS @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync DESTINY @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] ... further per-symbol failure lines suppressed; see end-of-loop summary
