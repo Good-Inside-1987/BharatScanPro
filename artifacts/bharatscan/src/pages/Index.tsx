@@ -744,20 +744,22 @@ const Index = () => {
                 {/* ── Favourites group — always at the top ── */}
                 {visibleCategories.filter((c) => favIds.has(c.id)).length > 0 && (
                   <>
-                    <SelectLabel className="py-1 pl-8 pr-2 text-[10px] uppercase tracking-wider text-yellow-400 font-semibold">
-                      ★ Favourites
-                    </SelectLabel>
-                    {visibleCategories
-                      .filter((c) => favIds.has(c.id))
-                      .map((c) => (
-                        <UniverseItem
-                          key={`fav-${c.id}`}
-                          value={c.id}
-                          label={`${c.name}${c.symbols.length ? ` (${c.symbols.length})` : ""}`}
-                          isFav={true}
-                          onToggleFav={toggleFavUniverse}
-                        />
-                      ))}
+                    <SelectGroup>
+                      <SelectLabel className="py-1 pl-8 pr-2 text-[10px] uppercase tracking-wider text-yellow-400 font-semibold">
+                        ★ Favourites
+                      </SelectLabel>
+                      {visibleCategories
+                        .filter((c) => favIds.has(c.id))
+                        .map((c) => (
+                          <UniverseItem
+                            key={`fav-${c.id}`}
+                            value={c.id}
+                            label={`${c.name}${c.symbols.length ? ` (${c.symbols.length})` : ""}`}
+                            isFav={true}
+                            onToggleFav={toggleFavUniverse}
+                          />
+                        ))}
+                    </SelectGroup>
                     <SelectSeparator />
                   </>
                 )}
