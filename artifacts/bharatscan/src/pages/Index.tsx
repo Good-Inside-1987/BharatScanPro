@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from "rea
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Play, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Download, Save, History, Trash2, BarChart3, Minus, Copy, ClipboardPaste, FolderInput, X, AlertTriangle, Database, Search, Layers, ChevronUp, ChevronDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator, SelectLabel } from "@/components/ui/select";
+import * as SelectPrimitive from "@radix-ui/react-select";
+import { Plus, Play, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Download, Save, History, Trash2, BarChart3, Minus, Copy, ClipboardPaste, FolderInput, X, AlertTriangle, Database, Search, Layers, ChevronUp, ChevronDown, Star, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConditionRow, newCondition, NameModeContext } from "@/components/ConditionRow";
 import { FilterGroupBlock, type DragSrc } from "@/components/FilterGroupBlock";
@@ -39,6 +40,57 @@ function fmtOptionSymbol(r: Pick<ScanResult, "symbol" | "strike" | "expiry">): s
 }
 /** "ALL" = every loaded CSV stock; otherwise a UniverseCategory id. */
 const ALL_UNIVERSE_ID = "ALL";
+
+const FAV_UNIVERSE_KEY = "bharatscan:fav-universe-ids";
+
+/** Universe dropdown item with a clickable star that toggles favourites
+ *  without selecting the item or closing the dropdown. */
+function UniverseItem({
+  value,
+  label,
+  isFav,
+  onToggleFav,
+}: {
+  value: string;
+  label: string;
+  isFav: boolean;
+  onToggleFav: (id: string) => void;
+}) {
+  return (
+    <SelectPrimitive.Item
+      value={value}
+      className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-xs outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+    >
+      {/* checkmark for the currently selected item */}
+      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+        <SelectPrimitive.ItemIndicator>
+          <Check className="h-3 w-3" />
+        </SelectPrimitive.ItemIndicator>
+      </span>
+
+      {/* star button — stops propagation so the item is NOT selected on star click */}
+      <button
+        type="button"
+        title={isFav ? "Remove from favourites" : "Add to favourites"}
+        className="mr-1.5 flex-shrink-0 focus:outline-none"
+        onPointerDown={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggleFav(value); }}
+      >
+        <Star
+          className={`h-3 w-3 transition-colors ${
+            isFav
+              ? "fill-yellow-400 text-yellow-400"
+              : "text-muted-foreground hover:text-yellow-400"
+          }`}
+        />
+      </button>
+
+      {/* only this text appears in the trigger when the item is selected */}
+      <SelectPrimitive.ItemText>{label}</SelectPrimitive.ItemText>
+    </SelectPrimitive.Item>
+  );
+}
 
 /** Find the latest trading date in `histories` that is ≤ `isoDate`.
  *  Used in Historical mode to find the last trading day on or before the
@@ -146,6 +198,22 @@ const Index = () => {
   // uploaded via the Master CSV (a flat list of categories).
   const [scanMode, setScanMode] = useState<ScanMode>("stocks");
   const [universeId, setUniverseId] = useState<string>(ALL_UNIVERSE_ID);
+
+  // ── Favourite universes ──────────────────────────────────────────────────────
+  const [favIds, setFavIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(FAV_UNIVERSE_KEY);
+      return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+    } catch { return new Set(); }
+  });
+  const toggleFavUniverse = useCallback((id: string) => {
+    setFavIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      try { localStorage.setItem(FAV_UNIVERSE_KEY, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }, []);
   const [optExpiry, setOptExpiry] = useState<string>("");
   const [optOffset, setOptOffset] = useState(0);
   const [optSide, setOptSide] = useState<"CE" | "PE">("CE");
@@ -673,18 +741,46 @@ const Index = () => {
                 <SelectValue placeholder="Pick a universe…" />
               </SelectTrigger>
               <SelectContent>
-                {/* "All Loaded Stocks" is only meaningful in Stocks mode — Options
-                    scans need an underlying list (Nifty Indices/Nifty50/Futures). */}
+                {/* ── Favourites group — always at the top ── */}
+                {visibleCategories.filter((c) => favIds.has(c.id)).length > 0 && (
+                  <>
+                    <SelectLabel className="py-1 pl-8 pr-2 text-[10px] uppercase tracking-wider text-yellow-400 font-semibold">
+                      ★ Favourites
+                    </SelectLabel>
+                    {visibleCategories
+                      .filter((c) => favIds.has(c.id))
+                      .map((c) => (
+                        <UniverseItem
+                          key={`fav-${c.id}`}
+                          value={c.id}
+                          label={`${c.name}${c.symbols.length ? ` (${c.symbols.length})` : ""}`}
+                          isFav={true}
+                          onToggleFav={toggleFavUniverse}
+                        />
+                      ))}
+                    <SelectSeparator />
+                  </>
+                )}
+
+                {/* ── All Loaded Stocks (Stocks mode only) ── */}
                 {scanMode === "stocks" && (
                   <SelectItem value={ALL_UNIVERSE_ID}>
                     All Loaded Stocks{histories.length ? ` (${histories.length})` : ""}
                   </SelectItem>
                 )}
-                {visibleCategories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}{c.symbols.length ? ` (${c.symbols.length})` : ""}
-                  </SelectItem>
-                ))}
+
+                {/* ── Remaining (non-favourite) categories ── */}
+                {visibleCategories
+                  .filter((c) => !favIds.has(c.id))
+                  .map((c) => (
+                    <UniverseItem
+                      key={c.id}
+                      value={c.id}
+                      label={`${c.name}${c.symbols.length ? ` (${c.symbols.length})` : ""}`}
+                      isFav={false}
+                      onToggleFav={toggleFavUniverse}
+                    />
+                  ))}
               </SelectContent>
             </Select>
 
