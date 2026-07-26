@@ -289,6 +289,59 @@ interface UnderlyingSyncResult {
   completed: number;
   failed: number;
   budgetExhausted: boolean;
+  /** True when Fyers signals its options-chain quota is exhausted for the day. */
+  rateLimited?: boolean;
+}
+
+// ── Rate-limit helpers ────────────────────────────────────────────────────────
+
+/**
+ * "request limit reached" — Fyers' JSON-level response when the options-chain
+ * API quota for the session/day is exhausted.  This is a hard stop: continuing
+ * would waste all remaining budget calls and still get 0 data.
+ */
+const HARD_RATE_LIMIT_RE = /request limit reached/i;
+
+/**
+ * "Rate limited by Fyers (received HTML instead of JSON)" — the per-second
+ * HTTP throttle Fyers applies when we exceed ~8–10 req/s.  This is transient;
+ * a short backoff is usually enough.
+ */
+const SOFT_RATE_LIMIT_RE = /rate limited by fyers/i;
+
+function isHardRateLimit(err: unknown): boolean {
+  return HARD_RATE_LIMIT_RE.test(err instanceof Error ? err.message : String(err));
+}
+
+function isSoftRateLimit(err: unknown): boolean {
+  return SOFT_RATE_LIMIT_RE.test(err instanceof Error ? err.message : String(err));
+}
+
+/**
+ * Like `throttleCall` but also retries on soft (per-second) rate limits with
+ * exponential backoff, and immediately surfaces hard (daily quota) rate limits
+ * so callers can stop the job cleanly instead of hammering a dead endpoint.
+ *
+ * Max two retries: 5 s then 10 s backoff before giving up.
+ */
+async function throttleWithRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
+  for (let attempt = 0; attempt <= 2; attempt++) {
+    try {
+      return await throttleCall(fn);
+    } catch (err) {
+      // Hard quota: bubble up immediately so the caller can stop the loop.
+      if (isHardRateLimit(err)) throw err;
+      // Not a soft rate-limit, or we've exhausted retries: rethrow.
+      if (!isSoftRateLimit(err) || attempt === 2) throw err;
+      const backoffMs = 5_000 * (attempt + 1); // 5 s, then 10 s
+      console.warn(
+        "[optionsDataService] Fyers soft rate limit on %s (attempt %d/3) — backing off %d ms",
+        label, attempt + 1, backoffMs
+      );
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
+  throw new Error("unreachable");
 }
 
 /** Nearest expiry on/after `date` (YYYY-MM-DD); falls back to the last known expiry. */
@@ -351,8 +404,13 @@ async function syncOptionsForUnderlying(
   let expiries: string[];
   try {
     const getExpiries = anyAdapter.getOptionExpiries as (s: string) => Promise<string[]>;
-    expiries = await throttleCall(() => getExpiries.call(adapter, fyersSymbol));
+    expiries = await throttleWithRetry(() => getExpiries.call(adapter, fyersSymbol), `${uName} expiries`);
   } catch (err) {
+    // Hard quota exhausted — signal the outer loop to stop cleanly.
+    if (isHardRateLimit(err)) {
+      console.warn("[optionsDataService] Fyers options-chain daily quota reached at %s — stopping job", uName);
+      return { completed: 0, failed: 0, budgetExhausted: false, rateLimited: true };
+    }
     try { classifyAdapterError(err); } catch (classified) {
       if (classified instanceof AuthenticationError || classified instanceof SessionExpiredError) throw classified;
     }
@@ -368,8 +426,13 @@ async function syncOptionsForUnderlying(
 
   let chain;
   try {
-    chain = await throttleCall(() => adapter.getOptionChain(fyersSymbol, expiry));
+    chain = await throttleWithRetry(() => adapter.getOptionChain(fyersSymbol, expiry), `${uName} chain`);
   } catch (err) {
+    // Hard quota exhausted — signal the outer loop to stop cleanly.
+    if (isHardRateLimit(err)) {
+      console.warn("[optionsDataService] Fyers options-chain daily quota reached at %s — stopping job", uName);
+      return { completed: 0, failed: 0, budgetExhausted: false, rateLimited: true };
+    }
     try { classifyAdapterError(err); } catch (classified) {
       if (classified instanceof AuthenticationError || classified instanceof SessionExpiredError) throw classified;
     }
@@ -569,7 +632,6 @@ export async function runOptionsSyncJob(
     for (const underlying of underlyings) {
       if (budgetExhausted) {
         skippedBudget++;
-        console.log("[optionsDataService] Skipping %s — daily request budget already exhausted", underlying);
         continue;
       }
 
@@ -588,6 +650,19 @@ export async function runOptionsSyncJob(
       }
       completed += result.completed;
       failed += result.failed;
+
+      if (result.rateLimited) {
+        // Fyers' options-chain daily quota is exhausted — count all remaining
+        // underlyings as skipped and stop immediately to avoid wasting budget.
+        skippedBudget += underlyings.length - underlyings.indexOf(underlying) - 1;
+        console.warn(
+          "[optionsDataService] Options-chain rate limit hit at %s — %d remaining underlyings skipped",
+          underlying,
+          underlyings.length - underlyings.indexOf(underlying) - 1
+        );
+        break;
+      }
+
       if (result.budgetExhausted) {
         budgetExhausted = true;
         skippedBudget++;
@@ -596,6 +671,12 @@ export async function runOptionsSyncJob(
           underlying
         );
       }
+
+      // Pause between underlyings to stay well within Fyers' per-minute
+      // options-chain rate limit.  The per-call throttle (125 ms) handles
+      // individual requests; this inter-underlying delay prevents the burst
+      // of 2+ calls per underlying from tripping the endpoint's quota.
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     // Retention cleanup is handled centrally by cleanupJob.ts (6 PM IST).
