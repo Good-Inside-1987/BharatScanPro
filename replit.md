@@ -21,6 +21,8 @@ Two workflows run in parallel:
 
 The frontend (port 5000) is what the user sees. It proxies `/api/*` requests to the backend on port 3001.
 
+The Replit runtime is configured to use Node.js 22 because the backend uses the built-in `node:sqlite` module. The imported project was verified with both workflows running: the backend health endpoint responds on port 3001 and the frontend responds on port 5000.
+
 ## Environment Variables
 
 | Variable | Required | Purpose |

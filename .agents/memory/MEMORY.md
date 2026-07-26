@@ -10,3 +10,4 @@
 - [Nightly sync jobs share the backfill budget](nightly-sync-budget-sharing.md) — EOD/intraday jobs must check existing rows before spending shared budget; ohlcv tables key on Fyers-formatted symbols, not plain tickers.
 - [SQLite schema evolution](schema-evolution-sqlite.md) — put a new index on an ALTER-added column next to the ALTER, never in the initial CREATE-TABLE-IF-NOT-EXISTS block, or existing DBs crash on startup.
 - [BharatScan diagnosis & fix roadmap](bharatscan-diagnosis.md) — confirmed root causes (invalid Fyers symbols, empty-candle coverage bug, localStorage-only universe); ordered fix list; key files.
+- [Completion review stale config](completion-review-stale-config.md) — verify live protected config and runtime directly when completion validation reports an inverted diff.
