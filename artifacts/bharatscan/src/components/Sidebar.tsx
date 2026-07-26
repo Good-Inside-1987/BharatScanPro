@@ -18,7 +18,7 @@ const NAV_ITEMS = [
   { to: "/home", label: "Home", icon: Home },
   { to: "/scanner-dashboard", label: "Scanner\nDashboard", icon: LayoutDashboard },
   { to: "/create-scan", label: "Create\nScan", icon: ScanSearch },
-  { to: "/options", label: "Options\nAnalysis", icon: LineChart },
+  { to: "/options", label: "Data\nAnalysis", icon: LineChart },
   { to: "/strategies-backtest", label: "Strategies\nBacktest", icon: TrendingUp },
   { to: "/portfolio", label: "Portfolio", icon: Briefcase },
   { to: "/paper-trading", label: "Paper\nTrading", icon: Wallet },
