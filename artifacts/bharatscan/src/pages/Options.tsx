@@ -364,7 +364,7 @@ function OptionsAnalysisTab() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-base font-bold text-foreground">Options Analysis</h1>
+              <h1 className="text-base font-bold text-foreground">Data Analysis</h1>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 PCR · Open Interest · Change in OI · Max Pain · Sentiment
               </p>
@@ -520,7 +520,7 @@ export default function OptionsPage() {
           { key: "simulator",       label: "Option Simulator", icon: Sliders           },
           { key: "stock-simulator", label: "Stock Simulator",  icon: CandlestickChart  },
           { key: "chain",           label: "Option Chain",     icon: Link2             },
-          { key: "analysis",        label: "Options Analysis", icon: BarChart2          },
+          { key: "analysis",        label: "Data Analysis", icon: BarChart2          },
           { key: "stock-intraday",  label: "Stock Intraday",   icon: Table2             },
         ].map(({ key, label, icon: Icon }) => (
           <button
