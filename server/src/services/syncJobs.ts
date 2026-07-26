@@ -319,6 +319,12 @@ function collectSample(
 // fetchJson() into Error("Rate limited by Fyers (received HTML instead of
 // JSON)"). This is genuinely transient and worth a short backoff + retry.
 //
+// "Fyers REST request failed: <reason>" is thrown by fetchJson() when
+// fetch() itself rejects before any HTTP response arrives — DNS hiccup,
+// TCP timeout, brief network interruption.  These are transient and safe
+// to retry: a bad token or invalid symbol produces an HTTP 200 with an
+// error body, never a fetch() rejection.
+//
 // NOTE: an earlier version of this list also treated Fyers' literal
 // "Could not authenticate the user" message as transient, on the theory
 // that Fyers uses that auth-sounding wording as a generic overload signal.
@@ -331,6 +337,7 @@ function collectSample(
 // a dead token across thousands of symbols.
 const TRANSIENT_OVERLOAD_PATTERNS = [
   /rate limited by fyers/i,
+  /fyers rest request failed/i,
 ];
 
 function isTransientOverloadError(err: unknown): boolean {
