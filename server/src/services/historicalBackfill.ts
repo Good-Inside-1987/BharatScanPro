@@ -358,8 +358,6 @@ function jobStatus(job: JobRow | undefined) {
     .get(
       TASK_STATUS.COMPLETED,
       TASK_STATUS.INVALID,
-      TASK_STATUS.COMPLETED,
-      TASK_STATUS.INVALID,
       TASK_STATUS.NO_DATA,
       TASK_STATUS.FAILED,
       job.id
