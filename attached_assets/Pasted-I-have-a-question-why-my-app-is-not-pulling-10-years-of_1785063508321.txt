@@ -1,0 +1,103 @@
+I have a question, why my app is not pulling 10 years of EOD data for all 2900+ stocks, in my local Electron, I am not talking about replit right now, and not saving it in database file, or is it pulling, because when I am running scan it is showing 0 results
+
+7 minutes ago
+Investigating data budgeting
+
+Investigating data budgeting
+You’re right to distinguish the local Electron app. I’ll use the Mac log and the local Electron code path only: how the backfill is started, how many requests it can make per day, and what the scanner actually reads from market.db.
+
+
+7 actions
+Short answer: your local Electron app has pulled and saved some EOD data, but it has not completed 10 years for all 2,900+ stocks.
+What your Mac log proves
+This line confirms that local Electron is reading saved data from its own database:
+[marketData] /scanner/universe-data — 2921 symbols, 113141 bars
+
+So data is being stored in:
+~/Library/Application Support/BharatScan/bharatscan-data/market.db
+
+However, 113,141 bars is far less than 10 years for 2,921 stocks. Ten years would normally be several million daily candles.
+The log also says:
+Daily request budget exhausted — stopping catch-up at 0/2
+
+That means the app’s shared daily broker-request budget was already exhausted. It stopped scheduled catch-up work instead of downloading more data.
+Why it does not automatically download 10 years
+There are two different processes:
+1. Nightly EOD sync
+This normally downloads only the current trading day’s candle for each stock. It does not download the previous 10 years.
+2. Historical EOD Backfill
+This is the process that downloads the older 10-year history. It must be started from:
+Settings → Broker Connect → Backfill Dashboard → Start
+
+It is resumable and runs over multiple days.
+For approximately 2,900 stocks:
+* One historical request covers roughly one year.
+* Ten years requires approximately 10 requests per stock.
+* Total: roughly 29,000–32,000 broker requests.
+* The local Electron budget is about 4,000 requests per day.
+* It therefore requires multiple days, assuming the broker permits the requests.
+The app saves successful chunks immediately in market.db, so it does not need to finish all ten years before data becomes available.
+Important issue in your log
+These warnings appeared:
+[market/status] Could not read historical backfill status:
+column index out of range
+
+This was an application bug in the historical backfill status query. It could make the dashboard display Not started or hide the real job status even when a backfill job already existed.
+That bug has been fixed in the source code, but your Mac needs to pull the newer code before the corrected status is visible.
+Why your scan can show zero results
+A zero-result scan does not necessarily mean the database has no data. The scanner can return zero when:
+1. The selected date is outside the saved data range.
+2. A selected indicator requires more history than currently exists.
+3. The selected universe does not match the loaded symbols.
+4. The filter conditions genuinely match no stocks.
+5. The backfill is paused because the daily budget was exhausted.
+6. The database data has not been loaded into the scanner yet.
+7. The historical backfill job exists, but the old status bug made it appear inactive.
+The scanner reads local saved rows; it does not automatically contact Fyers while scanning.
+Check the exact local database state
+On your Mac, stop the Electron app first, then run:
+DB="$HOME/Library/Application Support/BharatScan/bharatscan-data/market.db"
+
+sqlite3 "$DB" <<'SQL'
+SELECT 'EOD rows', COUNT(*) FROM ohlcv_daily;
+SELECT 'EOD symbols', COUNT(DISTINCT symbol) FROM ohlcv_daily;
+SELECT 'earliest date', MIN(date) FROM ohlcv_daily;
+SELECT 'latest date', MAX(date) FROM ohlcv_daily;
+
+SELECT
+job_name,
+status,
+pause_reason,
+total_tasks,
+requests_used,
+created_at,
+updated_at
+FROM historical_backfill_jobs
+ORDER BY id DESC
+LIMIT 1;
+SQL
+
+The results tell us exactly what is happening:
+* EOD rows: how many candles are saved.
+* EOD symbols: how many stocks have saved data.
+* earliest date: how far back the data goes.
+* latest date: the newest saved date.
+* status: whether the historical job is running, paused, or completed.
+* pause_reason: why it stopped.
+* requests_used: how much of the backfill has been attempted.
+What you should do
+First pull the latest fix and start Electron development mode:
+git pull
+pnpm install
+pnpm run electron:dev
+
+Then open:
+Settings → Broker Connect
+
+Check the Historical EOD Backfill section:
+* Not started → click Start
+* Running → leave Electron open and let it continue
+* Paused — daily budget exhausted → click Resume on the next day
+* Paused — reconnect broker → reconnect the broker, then click Resume
+* Completed → the ten-year job has finished
+Do not expect the full 10-year dataset to appear in one session. The app is designed to download it incrementally and save each successful chunk to the local market.db.

@@ -70,3 +70,42 @@ description: Findings from deep Electron/Fyers diagnosis session; what works, wh
 **Why:** The Mac Electron process and Replit preview use separate runtimes, sessions, and SQLite files; mixing their logs or assuming shared state produces false diagnoses. Keeping changes incremental makes each Fyers/data fix independently verifiable.
 
 **How to apply:** For future BharatScan work, first identify whether evidence comes from Replit or Mac Electron, preserve the existing fix order unless the user changes it, and never request or store secrets/tokens in diagnostics.
+
+---
+
+## Historical EOD Backfill — user guidance (saved from prior agent conversation)
+
+**Key distinction the user must understand:**
+- **Nightly EOD sync** — downloads only the current trading day's candle for each stock. Does NOT download historical years.
+- **Historical EOD Backfill** — separate resumable job that downloads older history. Must be manually started from: *Settings → Broker Connect → Backfill Dashboard → Start*.
+
+**Scale on local Electron (full budget):**
+- ~2,900 stocks × 10 years × ~1 request/year = ~29,000–32,000 broker requests total
+- Local Electron daily budget ≈ 4,000 requests/day → requires ~7–8 days of continuous running
+- The job is resumable; data is saved per-chunk so partial progress is never lost
+
+**As of last known Mac state:**
+- Only 113,141 bars in `ohlcv_daily` (far less than 10-year full dataset)
+- Log showed: `Daily request budget exhausted — stopping catch-up at 0/2` — job paused, not broken
+- Backfill status dashboard had a `column index out of range` bug that made it appear "not started" even when a job existed — this bug is fixed in Replit source; Mac must `git pull` to get the fix
+
+**Zero-scan-results checklist (in order of likelihood):**
+1. Selected date is outside the saved data range
+2. Indicator requires more history than currently exists
+3. Selected universe doesn't match loaded symbols
+4. Filter conditions genuinely match no stocks
+5. Backfill is paused (budget exhausted — resume next day)
+6. Database data not yet loaded into scanner
+7. Old status bug made backfill appear inactive (fixed — needs `git pull`)
+
+**To check exact Mac DB state (with Electron stopped):**
+```
+DB="$HOME/Library/Application Support/BharatScan/bharatscan-data/market.db"
+sqlite3 "$DB" "SELECT COUNT(*) FROM ohlcv_daily; SELECT MIN(date), MAX(date) FROM ohlcv_daily; SELECT status, pause_reason, requests_used FROM historical_backfill_jobs ORDER BY id DESC LIMIT 1;"
+```
+
+**Mac workflow after code changes in Replit:**
+```
+git pull && pnpm install && pnpm run electron:dev
+```
+Then check Settings → Broker Connect → Historical EOD Backfill section.
