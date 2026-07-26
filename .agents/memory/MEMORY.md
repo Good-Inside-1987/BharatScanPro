@@ -11,3 +11,4 @@
 - [SQLite schema evolution](schema-evolution-sqlite.md) — put a new index on an ALTER-added column next to the ALTER, never in the initial CREATE-TABLE-IF-NOT-EXISTS block, or existing DBs crash on startup.
 - [BharatScan diagnosis & fix roadmap](bharatscan-diagnosis.md) — confirmed root causes (invalid Fyers symbols, empty-candle coverage bug, localStorage-only universe); ordered fix list; key files.
 - [Completion review stale config](completion-review-stale-config.md) — verify live protected config and runtime directly when completion validation reports an inverted diff.
+- [Broker sync roadmap status](broker-sync-roadmap.md) — steps 1–3 are applied; backfill code exists but Step 4/5 require broker-backed Electron runtime verification.

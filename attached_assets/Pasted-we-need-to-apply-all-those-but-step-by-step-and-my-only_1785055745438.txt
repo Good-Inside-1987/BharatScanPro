@@ -1,0 +1,510 @@
+we need to apply all those, but step by step, and my only target is to my app work fine, and it pull data from broker, and properly save it in database file, so give me full list of step by step what we need to do, and see these are full log files of electron, "Last login: Sun Jul 26 12:16:49 on ttys000
+maheshsundriyal@Maheshs-Mac-mini ~ % cd ~/BharatScanPro/BharatScanPro
+git pull
+remote: Enumerating objects: 17, done.
+remote: Counting objects: 100% (17/17), done.
+remote: Compressing objects: 100% (4/4), done.
+remote: Total 10 (delta 6), reused 10 (delta 6), pack-reused 0 (from 0)
+Unpacking objects: 100% (10/10), 48.08 KiB | 1.50 MiB/s, done.
+From https://github.com/Good-Inside-1987/BharatScanPro
+   37709fe..954d2c9  main       -> origin/main
+Updating 37709fe..954d2c9
+Fast-forward
+ artifacts/bharatscan/src/pages/StockIntraday.tsx                       |  54 ++++++++++++++++++++++++++---------------
+ attached_assets/Screenshot_2026-07-26_at_12.05.40_PM_1785047904558.png | Bin 0 -> 3741 bytes
+ attached_assets/Screenshot_2026-07-26_at_12.10.04_PM_1785048007284.png | Bin 0 -> 55150 bytes
+ 3 files changed, 34 insertions(+), 20 deletions(-)
+ create mode 100644 attached_assets/Screenshot_2026-07-26_at_12.05.40_PM_1785047904558.png
+ create mode 100644 attached_assets/Screenshot_2026-07-26_at_12.10.04_PM_1785048007284.png
+maheshsundriyal@Maheshs-Mac-mini BharatScanPro % pnpm install
+Scope: all 5 workspace projects
+Already up to date
+Done in 186ms using pnpm v11.16.0
+maheshsundriyal@Maheshs-Mac-mini BharatScanPro % cd electron && npm install
+
+up to date in 715ms
+
+35 packages are looking for funding
+  run `npm fund` for details
+npm warn allow-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn allow-scripts   electron@40.10.6 (install: (install scripts present))
+npm warn allow-scripts
+npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.
+maheshsundriyal@Maheshs-Mac-mini electron % cd ~/BharatScanPro/BharatScanPro
+pnpm run electron:dev
+$ concurrently --kill-others-on-fail --names "vite,electron" -c "cyan,magenta" "pnpm --filter @workspace/bharatscan run dev" "pnpm --dir electron run dev"
+[electron] $ electron .
+[vite] $ vite --config vite.config.ts --host 0.0.0.0
+[electron] [electron] Data directory: /Users/maheshsundriyal/Library/Application Support/BharatScan/bharatscan-data
+[electron] [electron] isDev: true — loading from http://localhost:5173
+[vite] 
+[vite]   VITE v7.3.2  ready in 115 ms
+[vite] 
+[vite]   ➜  Local:   http://localhost:5173/
+[vite]   ➜  Network: http://192.168.29.176:5173/
+[electron] [server] ◇ injected env (4) from .env // tip: ⌘ override existing { override: true }
+[electron] [server] [migrate] No bharatscan.db found — skipping migration
+[electron] [server] BharatScan server running on http://localhost:3001
+[electron] [server] [catchUpScheduler] Startup catch-up: 2 missed job/day runs to process
+[electron] [server] [catchUpScheduler] Catching up intraday_sync for 2026-07-24 ...
+[electron] [server] [syncJobs] Intraday sync starting — 2964 symbols (all_nse universe, 1min candles) for 2026-07-24
+[electron] [electron] ✓ Express server ready at http://localhost:3001/api/health
+[electron] [electron] ✓ Vite dev server ready at localhost: 5173
+[electron] [server] [marketData] /scanner/universe-data — 2917 symbols, 2974 bars (2024-07-26 → 2026-07-26)
+[electron] [server] [syncJobs] Failed to sync ABNINT @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync ACCORD @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync ACTIVEINFR @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [syncJobs] Failed to sync AHIMSA @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync AMIABLE @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync ARIHANTACA @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync ASCOM @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync AVATAR @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync AVSL @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync BDR @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] ... further per-symbol failure lines suppressed; see end-of-loop summary
+[electron] [server] [scheduler] Market is closed and live feed is still connected — stopping it now
+[electron] [server] [liveOptionsTracker] ATM tracking stopped — cleared 0 contracts + 0 index spot subscription(s)
+[electron] [server] [liveFeedService] Evicting 6 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 9 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Evicting 10 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 8 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 4 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [scheduler] Market is closed and live feed is still connected — stopping it now
+[electron] [server] [liveOptionsTracker] ATM tracking stopped — cleared 0 contracts + 0 index spot subscription(s)
+[electron] [server] [liveFeedService] Evicting 2 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 4 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 7 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 10 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 1 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Evicting 6 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 4 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 10 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 10 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 10 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 8 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 2 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 10 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [liveFeedService] Evicting 5 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [scheduler] Market is closed and live feed is still connected — stopping it now
+[electron] [server] [liveOptionsTracker] ATM tracking stopped — cleared 0 contracts + 0 index spot subscription(s)
+[electron] [server] [syncJobs] Loop summary — completed=260 noData=2632 invalidSymbol=7 failed=65 skippedBudget=0
+[electron] [server] [syncJobs]   invalidSymbol: 7 — e.g. AGARWALFT(Fyers history request failed: Invalid symbol provided), ICELCO(Fyers history request failed: Invalid symbol provided), PURVFLEXI(Fyers history request failed: Invalid symbol provided), SHRIKANHA(Fyers history request failed: Invalid symbol provided), TICL(Fyers history request failed: Invalid symbol provided) ... +2 more
+[electron] [syncJobs]   noData: 2632 — e.g. 20MICRONS(0 bars), 21STCENMGM(0 bars), 3BBLACKBIO(0 bars), 3IINFOLTD(0 bars), 3MINDIA(0 bars) ... +2627 more
+[electron] [syncJobs]   failed: 65 — e.g. ABNINT(Fyers history request failed: Fyers REST request failed), ACCORD(Fyers history request failed: Fyers REST request failed), ACTIVEINFR(Fyers history request failed: Fyers REST request failed), AHIMSA(Fyers history request failed: Fyers REST request failed), AMIABLE(Fyers history request failed: Fyers REST request failed) ... +60 more
+[electron] [server] [syncJobs] Intraday sync done — status=failed completed=260 noData=2632 invalidSymbol=7 failed=65 skippedBudget=0
+[electron] [server] [catchUpScheduler] Catching up options_sync for 2026-07-24 ...
+[electron] [server] [optionsDataService] Nightly options sync starting — 215 underlyings for 2026-07-24 (stocks included: true)
+[electron] [server] [optionsDataService] No spot price for NIFTY — skipping
+[electron] [server] [optionsDataService] No spot price for BANKNIFTY — skipping
+[electron] [server] [optionsDataService] No spot price for FINNIFTY — skipping
+[electron] [server] [optionsDataService] No spot price for SENSEX — skipping
+[electron] [server] [optionsDataService] No spot price for MIDCPNIFTY — skipping
+[electron] [server] [optionsDataService] No spot price for 360ONE — skipping
+[electron] [server] [optionsDataService] No spot price for ABB — skipping
+[electron] [server] [optionsDataService] No spot price for ABCAPITAL — skipping
+[electron] [server] [optionsDataService] No spot price for ADANIENSOL — skipping
+[electron] [server] [optionsDataService] No spot price for ADANIENT — skipping
+[electron] [server] [optionsDataService] No spot price for ADANIGREEN — skipping
+[electron] [server] [optionsDataService] No spot price for ADANIPORTS — skipping
+[electron] [server] [optionsDataService] No spot price for ADANIPOWER — skipping
+[electron] [server] [optionsDataService] No spot price for ALKEM — skipping
+[electron] [server] [optionsDataService] No spot price for AMBER — skipping
+[electron] [server] [optionsDataService] No spot price for AMBUJACEM — skipping
+[electron] [server] [optionsDataService] No spot price for ANGELONE — skipping
+[electron] [server] [optionsDataService] No spot price for APLAPOLLO — skipping
+[electron] [server] [optionsDataService] No spot price for APOLLOHOSP — skipping
+[electron] [server] [optionsDataService] No spot price for ASHOKLEY — skipping
+[electron] [server] [optionsDataService] No spot price for ASIANPAINT — skipping
+[electron] [server] [optionsDataService] No spot price for ASTRAL — skipping
+[electron] [server] [optionsDataService] No spot price for AUBANK — skipping
+[electron] [server] [optionsDataService] No spot price for AUROPHARMA — skipping
+[electron] [server] [optionsDataService] No spot price for AXISBANK — skipping
+[electron] [server] [optionsDataService] No spot price for BAJAJ-AUTO — skipping
+[electron] [server] [optionsDataService] No spot price for BAJAJFINSV — skipping
+[electron] [server] [optionsDataService] No spot price for BAJAJHLDNG — skipping
+[electron] [server] [optionsDataService] No spot price for BAJFINANCE — skipping
+[electron] [server] [optionsDataService] No spot price for BANDHANBNK — skipping
+[electron] [server] [optionsDataService] No spot price for BANKBARODA — skipping
+[electron] [server] [optionsDataService] No spot price for BANKINDIA — skipping
+[electron] [server] [optionsDataService] No spot price for BDL — skipping
+[electron] [server] [optionsDataService] No spot price for BEL — skipping
+[electron] [server] [optionsDataService] No spot price for BHARATFORG — skipping
+[electron] [server] [optionsDataService] No spot price for BHARTIARTL — skipping
+[electron] [server] [optionsDataService] No spot price for BHEL — skipping
+[electron] [server] [optionsDataService] No spot price for BIOCON — skipping
+[electron] [server] [optionsDataService] No spot price for BLUESTARCO — skipping
+[electron] [server] [optionsDataService] No spot price for BOSCHLTD — skipping
+[electron] [server] [optionsDataService] No spot price for BPCL — skipping
+[electron] [server] [optionsDataService] No spot price for BRITANNIA — skipping
+[electron] [server] [optionsDataService] No spot price for BSE — skipping
+[electron] [server] [optionsDataService] No spot price for CAMS — skipping
+[electron] [server] [optionsDataService] No spot price for CANBK — skipping
+[electron] [server] [optionsDataService] No spot price for CDSL — skipping
+[electron] [server] [optionsDataService] No spot price for CGPOWER — skipping
+[electron] [server] [optionsDataService] No spot price for CHOLAFIN — skipping
+[electron] [server] [optionsDataService] No spot price for CIPLA — skipping
+[electron] [server] [optionsDataService] No spot price for COALINDIA — skipping
+[electron] [server] [optionsDataService] No spot price for COCHINSHIP — skipping
+[electron] [server] [optionsDataService] No spot price for COFORGE — skipping
+[electron] [server] [optionsDataService] No spot price for COLPAL — skipping
+[electron] [server] [optionsDataService] No spot price for CONCOR — skipping
+[electron] [server] [optionsDataService] No spot price for CROMPTON — skipping
+[electron] [server] [optionsDataService] No spot price for CUMMINSIND — skipping
+[electron] [server] [optionsDataService] No spot price for DABUR — skipping
+[electron] [server] [optionsDataService] No spot price for DALBHARAT — skipping
+[electron] [server] [optionsDataService] No spot price for DELHIVERY — skipping
+[electron] [server] [optionsDataService] No spot price for DIVISLAB — skipping
+[electron] [server] [optionsDataService] No spot price for DIXON — skipping
+[electron] [server] [optionsDataService] No spot price for DLF — skipping
+[electron] [server] [optionsDataService] No spot price for DMART — skipping
+[electron] [server] [optionsDataService] No spot price for DRREDDY — skipping
+[electron] [server] [optionsDataService] No spot price for EICHERMOT — skipping
+[electron] [server] [optionsDataService] No spot price for ETERNAL — skipping
+[electron] [server] [optionsDataService] No spot price for EXIDEIND — skipping
+[electron] [server] [optionsDataService] No spot price for FEDERALBNK — skipping
+[electron] [server] [optionsDataService] No spot price for FORCEMOT — skipping
+[electron] [server] [optionsDataService] No spot price for FORTIS — skipping
+[electron] [server] [optionsDataService] No spot price for GAIL — skipping
+[electron] [server] [optionsDataService] No spot price for GLENMARK — skipping
+[electron] [server] [optionsDataService] No spot price for GMRAIRPORT — skipping
+[electron] [server] [optionsDataService] No spot price for GODFRYPHLP — skipping
+[electron] [server] [optionsDataService] No spot price for GODREJCP — skipping
+[electron] [server] [optionsDataService] No spot price for GODREJPROP — skipping
+[electron] [server] [optionsDataService] No spot price for GRASIM — skipping
+[electron] [server] [optionsDataService] No spot price for GVT&D — skipping
+[electron] [server] [optionsDataService] No spot price for HAL — skipping
+[electron] [server] [optionsDataService] No spot price for HAVELLS — skipping
+[electron] [server] [optionsDataService] No spot price for HCLTECH — skipping
+[electron] [server] [optionsDataService] No spot price for HDFCAMC — skipping
+[electron] [server] [optionsDataService] No spot price for HDFCBANK — skipping
+[electron] [server] [optionsDataService] No spot price for HDFCLIFE — skipping
+[electron] [server] [optionsDataService] No spot price for HEROMOTOCO — skipping
+[electron] [server] [optionsDataService] No spot price for HINDALCO — skipping
+[electron] [server] [optionsDataService] No spot price for HINDPETRO — skipping
+[electron] [server] [optionsDataService] No spot price for HINDUNILVR — skipping
+[electron] [server] [optionsDataService] No spot price for HINDZINC — skipping
+[electron] [server] [optionsDataService] No spot price for HYUNDAI — skipping
+[electron] [server] [optionsDataService] No spot price for ICICIBANK — skipping
+[electron] [server] [optionsDataService] No spot price for ICICIGI — skipping
+[electron] [server] [optionsDataService] No spot price for ICICIPRULI — skipping
+[electron] [server] [optionsDataService] No spot price for IDEA — skipping
+[electron] [server] [optionsDataService] No spot price for IDFCFIRSTB — skipping
+[electron] [server] [optionsDataService] No spot price for IEX — skipping
+[electron] [server] [optionsDataService] No spot price for INDHOTEL — skipping
+[electron] [server] [optionsDataService] No spot price for INDIANB — skipping
+[electron] [server] [optionsDataService] No spot price for INDIGO — skipping
+[electron] [server] [optionsDataService] No spot price for INDUSINDBK — skipping
+[electron] [server] [optionsDataService] No spot price for INDUSTOWER — skipping
+[electron] [server] [optionsDataService] No spot price for INFY — skipping
+[electron] [server] [optionsDataService] No spot price for INOXWIND — skipping
+[electron] [server] [optionsDataService] No spot price for IOC — skipping
+[electron] [server] [optionsDataService] No spot price for IREDA — skipping
+[electron] [server] [optionsDataService] No spot price for IRFC — skipping
+[electron] [server] [optionsDataService] No spot price for ITC — skipping
+[electron] [server] [optionsDataService] No spot price for JINDALSTEL — skipping
+[electron] [server] [optionsDataService] No spot price for JIOFIN — skipping
+[electron] [server] [optionsDataService] No spot price for JSWENERGY — skipping
+[electron] [server] [optionsDataService] No spot price for JSWSTEEL — skipping
+[electron] [server] [optionsDataService] No spot price for JUBLFOOD — skipping
+[electron] [server] [optionsDataService] No spot price for KALYANKJIL — skipping
+[electron] [server] [optionsDataService] No spot price for KAYNES — skipping
+[electron] [server] [optionsDataService] No spot price for KEI — skipping
+[electron] [server] [optionsDataService] No spot price for KFINTECH — skipping
+[electron] [server] [optionsDataService] No spot price for KOTAKBANK — skipping
+[electron] [server] [optionsDataService] No spot price for KPITTECH — skipping
+[electron] [server] [optionsDataService] No spot price for LAURUSLABS — skipping
+[electron] [server] [optionsDataService] No spot price for LICHSGFIN — skipping
+[electron] [server] [optionsDataService] No spot price for LICI — skipping
+[electron] [server] [optionsDataService] No spot price for LODHA — skipping
+[electron] [server] [optionsDataService] No spot price for LT — skipping
+[electron] [server] [optionsDataService] No spot price for LTF — skipping
+[electron] [server] [optionsDataService] No spot price for LTM — skipping
+[electron] [server] [optionsDataService] No spot price for LUPIN — skipping
+[electron] [server] [optionsDataService] No spot price for M&M — skipping
+[electron] [server] [optionsDataService] No spot price for MANAPPURAM — skipping
+[electron] [server] [optionsDataService] No spot price for MANKIND — skipping
+[electron] [server] [optionsDataService] No spot price for MARICO — skipping
+[electron] [server] [optionsDataService] No spot price for MARUTI — skipping
+[electron] [server] [optionsDataService] No spot price for MAXHEALTH — skipping
+[electron] [server] [optionsDataService] No spot price for MAZDOCK — skipping
+[electron] [server] [optionsDataService] No spot price for MCX — skipping
+[electron] [server] [optionsDataService] No spot price for MFSL — skipping
+[electron] [server] [optionsDataService] No spot price for MOTHERSON — skipping
+[electron] [server] [optionsDataService] No spot price for MOTILALOFS — skipping
+[electron] [server] [optionsDataService] No spot price for MPHASIS — skipping
+[electron] [server] [optionsDataService] No spot price for MUTHOOTFIN — skipping
+[electron] [server] [optionsDataService] No spot price for NAM-INDIA — skipping
+[electron] [server] [optionsDataService] No spot price for NATIONALUM — skipping
+[electron] [server] [optionsDataService] No spot price for NAUKRI — skipping
+[electron] [server] [optionsDataService] No spot price for NBCC — skipping
+[electron] [server] [optionsDataService] No spot price for NESTLEIND — skipping
+[electron] [server] [optionsDataService] No spot price for NHPC — skipping
+[electron] [server] [optionsDataService] No spot price for NMDC — skipping
+[electron] [server] [optionsDataService] No spot price for NTPC — skipping
+[electron] [server] [optionsDataService] No spot price for NUVAMA — skipping
+[electron] [server] [optionsDataService] No spot price for NYKAA — skipping
+[electron] [server] [optionsDataService] No spot price for OBEROIRLTY — skipping
+[electron] [server] [optionsDataService] No spot price for OFSS — skipping
+[electron] [server] [optionsDataService] No spot price for OIL — skipping
+[electron] [server] [optionsDataService] No spot price for ONGC — skipping
+[electron] [server] [optionsDataService] No spot price for PAGEIND — skipping
+[electron] [server] [optionsDataService] No spot price for PATANJALI — skipping
+[electron] [server] [optionsDataService] No spot price for PAYTM — skipping
+[electron] [server] [optionsDataService] No spot price for PERSISTENT — skipping
+[electron] [server] [optionsDataService] No spot price for PETRONET — skipping
+[electron] [server] [optionsDataService] No spot price for PFC — skipping
+[electron] [server] [optionsDataService] No spot price for PGEL — skipping
+[electron] [server] [optionsDataService] No spot price for PHOENIXLTD — skipping
+[electron] [server] [optionsDataService] Failed to fetch option chain for PIDILITIND 2026-07-28: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for PIIND: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for PNB: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for PNBHOUSING: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for POLICYBZR: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for POLYCAB: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for POWERGRID: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for POWERINDIA: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for PREMIERENE: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for PRESTIGE: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for RADICO: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for RBLBANK: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for RECLTD: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for RELIANCE: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for RVNL: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for SAIL: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for SBICARD: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for SBILIFE: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for SBIN: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for SHREECEM: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for SHRIRAMFIN: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for SIEMENS: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for SOLARINDS: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for SONACOMS: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for SRF: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for SUNPHARMA: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for SUPREMEIND: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for SUZLON: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for SWIGGY: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for TATACONSUM: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for TATAELXSI: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for TATAPOWER: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for TATASTEEL: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for TCS: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for TECHM: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for TIINDIA: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for TITAN: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for TMPV: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for TORNTPHARM: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for TRENT: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for TVSMOTOR: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for ULTRACEMCO: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for UNIONBANK: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for UNITDSPR: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for UNOMINDA: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for UPL: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for VBL: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for VEDL: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for VMM: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for VOLTAS: Fyers options-chain request failed: request limit reached
+[electron] [server] [optionsDataService] Failed to fetch expiries for WAAREEENER: Rate limited by Fyers (received HTML instead of JSON)
+[electron] [server] [optionsDataService] Failed to fetch expiries for WIPRO: Rate limited by Fyers (received HTML instead of JSON)
+[electron] [server] [optionsDataService] Failed to fetch expiries for YESBANK: Rate limited by Fyers (received HTML instead of JSON)
+[electron] [server] [optionsDataService] Failed to fetch expiries for ZYDUSLIFE: Rate limited by Fyers (received HTML instead of JSON)
+[electron] [server] [optionsDataService] Nightly options sync done — completed=0 skippedBudget=0 failed=54
+[electron] [server] [marketData] /scanner/universe-data — 2917 symbols, 2974 bars (2024-07-26 → 2026-07-26)
+
+"
+
+Let me look at the relevant server code to understand what's actually broken before giving you the plan.
+
+18 actions
+Now I have the full picture. Let me lay out exactly what's happening and the ordered fix list.
+
+3 actions
+Here's the full diagnosis from your logs and a clear ordered fix plan.
+
+What the logs actually show
+Intraday sync (catch-up for 2026-07-24):
+* ✅ 260 symbols saved — working correctly
+* ✅ 7 invalid symbols — correctly classified and skipped permanently
+* ⚠️ 2,632 noData — expected, not a bug; Fyers genuinely has no 1-min data for illiquid/SME stocks
+* ❌ 65 failed with "Fyers REST request failed" — raw network errors (fetch() threw before even reaching Fyers); the retry logic only covers HTML-rate-limit responses, not network failures
+Options sync (catch-up for 2026-07-24):
+* ❌ All 215 underlyings: "No spot price — skipping" → 0 options data saved at all
+* ❌ "request limit reached" for ~54 symbols — because 215 × 2 API calls (getExpiries + getOptionChain) were made just to check spot prices, burning through Fyers' rate limit
+* Root cause: the options chain API returns underlying_ltp = 0 when the market is closed (you ran catch-up on Sunday). Code checks if (!spot || spot <= 0) → skip — so everything gets skipped. Fix is to use the closing price from the ohlcv_daily database for the target date as the spot price fallback.
+Backfill dashboard: Shows "Not started" — no historical EOD data has been downloaded yet.
+
+Step-by-step fix plan (in order)
+#	Fix	Impact	What changes
+1	Options sync: use ohlcv_daily closing price as spot fallback	🔴 HIGH — unblocks all options data	optionsDataService.ts: before calling getOptionChain, look up the closing price for the underlying from ohlcv_daily for the target date; use it when chain.spotPrice is 0
+2	Options sync: add per-underlying delay + stop on rate-limit	🔴 HIGH — prevents budget waste	optionsDataService.ts: add ~500ms delay between underlyings; detect "request limit reached" as a stop signal (not just a failed counter)
+3	Retry raw network failures in sync loop	🟡 MEDIUM — fixes 65 transient failures	syncJobs.ts: add network/fetch errors to the retryable patterns in fetchBarsWithRetry
+4	Start historical EOD backfill	🔴 HIGH — needed for scanner to have data	User action: click "Start" on the Backfill Dashboard in your Electron app. Budget is 4,000 req/day; at ~2,964 symbols it will take multiple days to complete
+5	Verify options sync works on next trading day	✅ VERIFY — confirm end-to-end	Run on Monday (26 July) and check that options sync shows completed > 0
+Want me to start with Step 1 right now (the options sync spot price fix)? That's the highest-impact change since it's blocking all options data from being saved.
+
+
+ok start with step 1, and let me ask before starting step 2
+
+9 minutes ago
+
+4 actions
+Good. Let me look at the exact schema and then make the targeted fix.
+
+6 actions
+Now I have everything I need. Let me implement the fix.
+The problem: syncOptionsForUnderlying calls the Fyers option chain API to get underlying_ltp (spot price), but Fyers returns 0 when the market is closed (catch-up runs on Sunday for Thursday's date). The fix is to fall back to the closing price stored in ohlcv_daily — or the last intraday bar — for that date.
+
+3 actions
+Good. The schema is clear. Now I'll make the fix. The logic:
+* After getOptionChain returns spotPrice = 0 (market closed), query ohlcv_daily for the target date's close using the Fyers symbol. If still nothing (index symbols aren't in EOD), try ohlcv_intraday last bar for that date.
+* Log clearly which source was used so you can verify.
+
+2 actions
+Now let me verify TypeScript is happy with the change and restart the backend.
+
+2 actions
+Clean compile. Let me restart the backend and push the change to Git so your Electron app can pull it.
+
+8 actions
+Step 1 is done and pushed to GitHub (main). Here's what changed:
+What the fix does: When getOptionChain returns spotPrice = 0 (because the market is closed during catch-up), the code now:
+1. First checks ohlcv_daily for the underlying's closing price on or before the target date — covers all F&O stocks whose EOD sync already ran
+2. Falls back to ohlcv_intraday last bar for that date — covers index symbols (NIFTY, BANKNIFTY) that the live feed captured intraday
+3. Logs clearly which source it used, or logs a warning with instructions if neither DB has data yet
+To verify on your Mac:
+cd ~/BharatScanPro/BharatScanPro && git pull && pnpm run electron:dev
+
+In the next options sync catch-up, instead of 215 × "No spot price — skipping", you should see logs like:
+RELIANCE: API spot=0 (market closed?), using DB close=1423.50 for 2026-07-24
+
+And the options sync should start completing contracts instead of 0.
+One thing to be aware of: the DB fallback only works if EOD sync already ran for that date. For the catch-up for 2026-07-24, since the intraday sync saved 260 symbols, stocks with intraday data will work. Indices (NIFTY, BANKNIFTY) will work if the live feed was running during market hours on 2026-07-24 and saved intraday bars.
+Let me know when you're ready for Step 2 (rate-limit handling in the options sync).
+
+Worked for 3 minutes
+ok start with step 2, and let me ask before starting step 3
+
+4 minutes ago
+Fixing rate limit errors
+
+Fixing rate limit errors
+Let me read the current options sync loop and the throttle config to understand exactly what to change.
+
+6 actions
+Good, I have the full picture now. Two issues to fix:
+1. "request limit reached" — Fyers quota on the options-chain endpoint is exhausted; the loop just logs and barrels on, making 54 more failing calls. Should stop cleanly.
+2. "Rate limited by Fyers (received HTML)" — per-second HTTP throttle at the tail end; needs backoff+retry.
+3. No inter-underlying delay — the 125ms throttleCall paces individual API calls but nothing slows the outer loop between underlyings.
+
+3 actions
+I have everything I need. Making all the changes now:
+
+2 actions
+Now update syncOptionsForUnderlying to use throttleWithRetry and propagate the hard rate-limit signal, then add the inter-underlying delay to the outer loop — both in parallel since I already know what each block looks like.
+
+2 actions
+Now update the outer loop — add the inter-underlying delay and handle the rateLimited stop signal.
+
+4 actions
+Clean compile. Restarting the backend and pushing to GitHub in parallel.
+
+3 actions
+Step 2 is done and pushed. Here's a summary of what changed:
+What's fixed:
+* Hard rate limit ("request limit reached") — when Fyers signals the options-chain daily quota is exhausted, the job now stops immediately and counts all remaining underlyings as skippedBudget instead of hammering the endpoint 54 more times
+* Soft rate limit (HTML 429) — throttleWithRetry backs off 5 s then 10 s and retries up to twice before giving up on that underlying
+* Inter-underlying delay — 500 ms pause between each underlying on top of the existing 125 ms per-call throttle, so the burst of 2+ calls per underlying doesn't trip Fyers' per-minute quota
+What the log should look like after the fix: Instead of 54 × "Failed to fetch expiries for X: request limit reached", you'll see one clean stop message like:
+[optionsDataService] Fyers options-chain daily quota reached at RELIANCE — 48 remaining underlyings skipped
+[optionsDataService] Nightly options sync done — completed=X skippedBudget=48 failed=0
+
+To pick it up on your Mac:
+cd ~/BharatScanPro/BharatScanPro && git pull
+
+Let me know when you're ready for Step 3 (retry network-level failures for the 65 transient intraday symbols).
+
+ok start with step 3, and let me ask before starting step 4
+
+2 minutes ago
+Retrying network failures
+
+Retrying network failures
+I already read this code earlier. Let me just confirm the exact lines to edit before making the change.
+
+3 actions
+Everything I need is clear. The raw network error message is "Fyers REST request failed: <reason>" — thrown by fetchJson when fetch() itself fails before any HTTP response. It's not in TRANSIENT_OVERLOAD_PATTERNS, so fetchBarsWithRetry treats it as permanent and never retries.
+The fix: add it to the pattern list, with a comment explaining why it's safe to retry (network blip vs. bad token).
+
+7 actions
+Step 3 is done and pushed. Here's exactly what changed:
+What the fix does:
+fetchBarsWithRetry now recognises "Fyers REST request failed: ..." as a transient, retryable error — the same as the HTML rate-limit it already retried. When a raw network failure hits a symbol, it waits 1 s then tries again, then 2 s then tries once more, before finally counting it as failed. Authentication errors still stop the job immediately (unchanged).
+What the log should look like after the fix:
+Instead of 65 × "Failed to sync ABNINT @ 2026-07-24: Fyers REST request failed" going straight to the failed bucket, you'll see retry warnings for the ones that recover:
+[syncJobs] Transient overload syncing ABNINT @ 2026-07-24 (attempt 1/3) — retrying in 1000ms: Fyers REST request failed: ...
+
+and the end-of-loop summary failed= count should drop noticeably.
+To pick it up on your Mac:
+cd ~/BharatScanPro/BharatScanPro && git pull
+
+Let me know when you're ready for Step 4 (starting the historical EOD backfill — that one is mostly a user action in the Backfill Dashboard, but I should check first whether there's anything in the code that needs to be verified before you hit Start).
+
+ok start with step 4, and let me ask before starting step 5
+
+5 minutes ago
+Verifying backfill code
+
+Verifying backfill code
+Step 4 is "start historical EOD backfill." Before telling you to hit Start, I need to check the backfill code is solid — let me look at it first.
+
+
+3 actions
+The backfill code looks solid. Let me quickly check the config values it uses so I can give you accurate numbers.
+
+8 actions
+The backfill code is solid — no code changes needed for Step 4. Here's the full picture before you hit Start.
+
+What the backfill will do
+Your Electron app runs with these config values (non-Replit mode):
+* Universe: all NSE stocks (all_nse) — ~2,964 symbols
+* Depth: 10 years back (eodRetentionYears: 10) — from ~July 2016 to today
+* Budget: 4,000 broker API requests per day
+Task math:
+* 10 years ÷ ~1 year per request chunk = 10 tasks per symbol
+* 2,964 symbols × 10 chunks = ~29,640 total tasks
+* At 4,000/day → 7–8 days to fully complete
+On trading days (Monday onward), the EOD sync (~2,964 req) and intraday sync (~2,964 req) both run in the afternoon and eat into the shared budget. That leaves roughly 1,000–1,500 requests for backfill on those days, so those days go slower. Weekends and holidays give the full 4,000 to backfill.
+
+How it behaves automatically
+* Auto-pauses at midnight IST when the daily budget is exhausted
+* Auto-resumes within 60 seconds after the new day's budget resets at midnight
+* Survives restarts — if Electron closes mid-run, all in-progress tasks are reset to pending and the job picks up exactly where it left off on next launch
+* Skips already-covered ranges — the nightly EOD sync and the backfill share the same coverage tracking (backfill_progress table), so they never duplicate a request
+* Skips invalid symbols — permanently marks them in the DB so they're never retried
+
+What the numbers on the dashboard mean
+Field	What it means
+Completed	Symbols where all 10 year-chunks returned ≥1 bar
+No Data	Chunks where Fyers returned 0 bars (illiquid/SME stocks — will retry once)
+Invalid	Permanently bad Fyers symbols — skipped forever
+Failed	Transient errors — retried on next resume
+Queue Depth	Pending tasks waiting to run
+Worker	running while it's actively fetching; idle between budget pauses
+Action needed — just one click
+In your Electron app: Settings → Broker Connect → Backfill Dashboard → click Start.
+The job starts immediately and runs in the background. You'll see the Queue Depth count down and the Completed count climb. You don't need to keep the app focused — it runs as long as Electron is open.
+Let me know when you're ready for Step 5 (verifying the full pipeline end-to-end with the next trading day's data, Monday July 28).
