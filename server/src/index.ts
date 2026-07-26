@@ -196,24 +196,103 @@ app.get("/api/market/status", (_req, res) => {
     }
   }
 
+  // Electron users can have a market.db created by an older version of the
+  // app.  The schema initializer normally upgrades it on startup, but a
+  // partially upgraded/locked database must not make the whole aggregate
+  // status endpoint return 500.  Quote-cache diagnostics use a separate
+  // endpoint, which is why this used to make only the Backfill and Nightly
+  // panels disappear.
+  function safeMarketCount(label: string, sql: string): number {
+    try {
+      return Number((marketDb.prepare(sql).get() as { n: number }).n ?? 0);
+    } catch (err) {
+      console.warn(
+        `[market/status] Could not read ${label}; using 0 for this legacy database:`,
+        err instanceof Error ? err.message : String(err),
+      );
+      return 0;
+    }
+  }
+
   // ── Symbol-table counts ────────────────────────────────────────────────────
   // All three queries are cheap covering-index reads (no table scan on a cold
   // DB); ohlcv_daily uses the idx_ohlcv_daily index for the DISTINCT count.
-  const totalSymbols = (marketDb
-    .prepare(`SELECT COUNT(*) AS n FROM symbols WHERE is_delisted = 0`)
-    .get() as { n: number }).n;
+  const totalSymbols = safeMarketCount(
+    "symbol count",
+    `SELECT COUNT(*) AS n FROM symbols WHERE is_delisted = 0`,
+  );
+  const fyersInvalidSymbols = safeMarketCount(
+    "invalid Fyers symbol count",
+    `SELECT COUNT(*) AS n FROM symbols WHERE is_delisted = 0 AND fyers_eod_invalid = 1`,
+  );
+  const symbolsWithEodData = safeMarketCount(
+    "EOD data symbol count",
+    `SELECT COUNT(DISTINCT symbol) AS n FROM ohlcv_daily`,
+  );
+  const nseHolidaysCount = safeMarketCount(
+    "NSE holiday count",
+    `SELECT COUNT(*) AS n FROM nse_holidays`,
+  );
 
-  const fyersInvalidSymbols = (marketDb
-    .prepare(`SELECT COUNT(*) AS n FROM symbols WHERE is_delisted = 0 AND fyers_eod_invalid = 1`)
-    .get() as { n: number }).n;
+  const backfill = (() => {
+    try {
+      return getServiceStats();
+    } catch (err) {
+      console.warn(
+        "[market/status] Could not read backfill service stats; using an empty snapshot:",
+        err instanceof Error ? err.message : String(err),
+      );
+      return {
+        dailyRequestsUsed: 0,
+        dailyRequestBudget: config.backfillDailyRequestBudget,
+        remainingBudgetToday: config.backfillDailyRequestBudget,
+        budgetResetDate: new Date().toISOString().slice(0, 10),
+        queueDepth: 0,
+        workerRunning: false,
+        adaptersCached: 0,
+        symbols: [],
+      };
+    }
+  })();
 
-  const symbolsWithEodData = (marketDb
-    .prepare(`SELECT COUNT(DISTINCT symbol) AS n FROM ohlcv_daily`)
-    .get() as { n: number }).n;
+  const historicalBackfill = (() => {
+    try {
+      return getHistoricalBackfillStatus();
+    } catch (err) {
+      console.warn(
+        "[market/status] Could not read historical backfill status; using null:",
+        err instanceof Error ? err.message : String(err),
+      );
+      return null;
+    }
+  })();
 
-  const nseHolidaysCount = (marketDb
-    .prepare(`SELECT COUNT(*) AS n FROM nse_holidays`)
-    .get() as { n: number }).n;
+  const nightlySync = (() => {
+    try {
+      return getNightlySyncStatus();
+    } catch (err) {
+      console.warn(
+        "[market/status] Could not read nightly sync status; using an empty snapshot:",
+        err instanceof Error ? err.message : String(err),
+      );
+      const emptyJob = (jobName: string) => ({
+        jobName,
+        startedAt: null,
+        finishedAt: null,
+        status: null,
+        symbolsCompleted: 0,
+        symbolsSkippedBudget: 0,
+        symbolsFailed: 0,
+        errorMessage: null,
+      });
+      return {
+        eod: emptyJob("eod_sync"),
+        intraday: emptyJob("intraday_sync"),
+        options: emptyJob("options_sync"),
+        symbolMaster: emptyJob("symbol_master"),
+      };
+    }
+  })();
 
   res.json({
     environment: config.envLabel,
@@ -224,9 +303,9 @@ app.get("/api/market/status", (_req, res) => {
     },
     angel_connected: false, // will be updated when Angel API is integrated
     last_sync: null,        // will be populated from sync_log once Angel is running
-    backfill: getServiceStats(),
-    historicalBackfill: getHistoricalBackfillStatus(),
-    nightlySync: getNightlySyncStatus(),
+    backfill,
+    historicalBackfill,
+    nightlySync,
     symbolStats: {
       total: totalSymbols,
       fyersInvalid: fyersInvalidSymbols,
