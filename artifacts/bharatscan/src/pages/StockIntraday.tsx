@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   Database,
-  Minus,
   Plus,
   RefreshCw,
   Settings2,
   Table2,
+  Trash2,
   Wifi,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -150,6 +150,8 @@ const DEFAULT_CUSTOM_CONDITION: CustomCondition = {
   right: "close",
 };
 
+const DELETE_CONDITION_VALUE = "__delete_condition__";
+
 function conditionLabel(column: ConditionColumn): string {
   if (column.key === "custom") {
     const custom = column.custom ?? DEFAULT_CUSTOM_CONDITION;
@@ -222,8 +224,17 @@ function ConditionHeader({
   return (
     <th className="sticky top-0 z-[1] w-[116px] border-b border-r border-border/60 px-1 py-1 last:border-r-0">
       <div className="flex items-center justify-center gap-0.5">
-        <Select value={column.key} onValueChange={onChange}>
-          <SelectTrigger className="h-5 min-w-0 flex-1 gap-0.5 border-0 bg-transparent px-1 text-[8px] font-bold uppercase tracking-wide text-muted-foreground shadow-none focus:ring-0">
+        <Select
+          value={column.key}
+          onValueChange={(value) => {
+            if (value === DELETE_CONDITION_VALUE) {
+              onRemove();
+              return;
+            }
+            onChange(value as ConditionKey | "custom");
+          }}
+        >
+          <SelectTrigger className="h-5 w-full min-w-0 justify-center gap-0.5 border-0 bg-transparent px-0.5 text-center text-[8px] font-bold uppercase tracking-wide text-muted-foreground shadow-none focus:ring-0 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:shrink-0 [&>svg]:opacity-50">
             <SelectValue>{conditionLabel(column)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -234,6 +245,20 @@ function ConditionHeader({
             ))}
             <SelectSeparator />
             <SelectItem value="custom" className="text-xs">Custom condition…</SelectItem>
+            {column.removable && (
+              <>
+                <SelectSeparator />
+                <SelectItem
+                  value={DELETE_CONDITION_VALUE}
+                  className="text-xs text-destructive focus:bg-destructive/10 focus:text-destructive"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Trash2 className="h-3 w-3" />
+                    Delete condition
+                  </span>
+                </SelectItem>
+              </>
+            )}
           </SelectContent>
         </Select>
 
@@ -299,17 +324,6 @@ function ConditionHeader({
           </Popover>
         )}
 
-        {column.removable && (
-          <button
-            type="button"
-            aria-label={`Remove ${conditionLabel(column)} condition`}
-            title="Remove condition"
-            onClick={onRemove}
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-destructive/15 hover:text-destructive focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-destructive"
-          >
-            <Minus className="h-3 w-3" />
-          </button>
-        )}
       </div>
     </th>
   );
@@ -520,12 +534,12 @@ export default function StockIntraday() {
                   <thead>
                      <tr>
                        <TableHeader label="Ticker" align="left" className="w-[130px]" />
-                       <TableHeader label="Prv. Close" className="w-[82px]" />
-                       <TableHeader label="Open" className="w-[82px]" />
-                       <TableHeader label="High" className="w-[82px]" />
-                       <TableHeader label="Low" className="w-[82px]" />
-                       <TableHeader label="LTP" className="w-[82px]" />
-                       <TableHeader label="Volume" className="w-[92px]" />
+                        <TableHeader label="Prv. Close" align="right" className="w-[82px]" />
+                        <TableHeader label="Open" align="right" className="w-[82px]" />
+                        <TableHeader label="High" align="right" className="w-[82px]" />
+                        <TableHeader label="Low" align="right" className="w-[82px]" />
+                        <TableHeader label="LTP" align="right" className="w-[82px]" />
+                        <TableHeader label="Volume" align="right" className="w-[92px]" />
                        {conditionColumns.map((column) => {
                          return (
                            <ConditionHeader
