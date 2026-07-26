@@ -298,6 +298,42 @@ function pickNearestExpiry(expiries: string[], date: string): string | null {
   return sorted.find((e) => e >= date) ?? sorted[sorted.length - 1];
 }
 
+/**
+ * Fallback spot price lookup from the local SQLite databases.
+ *
+ * When the Fyers options-chain API returns underlying_ltp = 0 (market closed,
+ * weekend catch-up, etc.), we look up the most recent closing price stored
+ * in ohlcv_daily (populated by EOD sync) for the given date.  If the symbol
+ * isn't in that table (e.g. index symbols which the EOD job doesn't cover),
+ * we fall back to the last intraday bar on or before the target date from
+ * ohlcv_intraday (populated by live feed / intraday sync).
+ *
+ * Returns the close price, or null if nothing is available.
+ */
+function lookupSpotPriceFromDb(fyersSymbol: string, date: string): number | null {
+  // 1. Try EOD daily table — most reliable for equity underlyings.
+  const eodRow = marketDb
+    .prepare(
+      `SELECT close FROM ohlcv_daily
+        WHERE symbol = ? AND date <= ?
+        ORDER BY date DESC LIMIT 1`
+    )
+    .get(fyersSymbol, date) as { close: number } | undefined;
+  if (eodRow && eodRow.close > 0) return eodRow.close;
+
+  // 2. Try intraday table — covers index symbols tracked by the live feed.
+  const intradayRow = marketDb
+    .prepare(
+      `SELECT close FROM ohlcv_intraday
+        WHERE symbol = ? AND date(timestamp) <= ?
+        ORDER BY timestamp DESC LIMIT 1`
+    )
+    .get(fyersSymbol, date) as { close: number } | undefined;
+  if (intradayRow && intradayRow.close > 0) return intradayRow.close;
+
+  return null;
+}
+
 async function syncOptionsForUnderlying(
   adapter: BrokerAdapter,
   underlying: string,
@@ -341,10 +377,27 @@ async function syncOptionsForUnderlying(
     return { completed: 0, failed: 1, budgetExhausted: false };
   }
 
-  const spot = chain.spotPrice;
-  if (!spot || spot <= 0) {
-    console.warn("[optionsDataService] No spot price for %s — skipping", uName);
-    return { completed: 0, failed: 0, budgetExhausted: false };
+  // Resolve spot price: prefer the live value from the options chain API
+  // (works during market hours).  When the market is closed — e.g. a
+  // weekend catch-up for a past trading date — the API returns 0, so fall
+  // back to the closing price stored in our local database for that date.
+  let spot = chain.spotPrice && chain.spotPrice > 0 ? chain.spotPrice : null;
+  if (!spot) {
+    const dbPrice = lookupSpotPriceFromDb(fyersSymbol, date);
+    if (dbPrice) {
+      spot = dbPrice;
+      console.log(
+        "[optionsDataService] %s: API spot=0 (market closed?), using DB close=%.2f for %s",
+        uName, spot, date
+      );
+    } else {
+      console.warn(
+        "[optionsDataService] No spot price for %s — API returned 0 and no close found in DB for %s. " +
+        "Run EOD/intraday sync first so the closing price is available for options ATM selection.",
+        uName, date
+      );
+      return { completed: 0, failed: 0, budgetExhausted: false };
+    }
   }
 
   const range = strikeRange(uName);
