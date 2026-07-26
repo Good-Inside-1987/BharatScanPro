@@ -1,0 +1,68 @@
+Last login: Sun Jul 26 14:53:26 on ttys000
+maheshsundriyal@Maheshs-Mac-mini ~ % cd ~/BharatScanPro/BharatScanPro
+pnpm run electron:dev
+$ concurrently --kill-others-on-fail --names "vite,electron" -c "cyan,magenta" "pnpm --filter @workspace/bharatscan run dev" "pnpm --dir electron run dev"
+[electron] $ electron .
+[vite] $ vite --config vite.config.ts --host 0.0.0.0
+[vite] 
+[vite]   VITE v7.3.2  ready in 115 ms
+[vite] 
+[vite]   ➜  Local:   http://localhost:5173/
+[vite]   ➜  Network: http://192.168.29.176:5173/
+[electron] [electron] Data directory: /Users/maheshsundriyal/Library/Application Support/BharatScan/bharatscan-data
+[electron] [electron] isDev: true — loading from http://localhost:5173
+[electron] [server] ◇ injected env (4) from .env // tip: ⌘ override existing { override: true }
+[electron] [server] [migrate] No bharatscan.db found — skipping migration
+[electron] [server] BharatScan server running on http://localhost:3001
+[electron] [server] [syncJobs] Cleaned up 1 orphaned 'running' sync_log row(s) from previous process
+[electron] [server] [catchUpScheduler] Startup catch-up: 2 missed job/day runs to process
+[electron] [server] [catchUpScheduler] Catching up intraday_sync for 2026-07-24 ...
+[electron] [server] [syncJobs] Intraday sync starting — 3031 symbols (all_nse universe, 1min candles) for 2026-07-24
+[electron] [electron] ✓ Express server ready at http://localhost:3001/api/health
+[electron] [electron] ✓ Vite dev server ready at localhost: 5173
+[electron] [server] [marketData] /scanner/universe-data — 2917 symbols, 58753 bars (2024-07-26 → 2026-07-26)
+[electron] [server] [syncJobs] Transient overload syncing ABNINT @ 2026-07-24 (attempt 1/3) — retrying in 1000ms: Rate limited by Fyers (received HTML instead of JSON)
+[electron] [server] [syncJobs] Transient overload syncing ABNINT @ 2026-07-24 (attempt 2/3) — retrying in 2000ms: Rate limited by Fyers (received HTML instead of JSON)
+[electron] [server] [syncJobs] Failed to sync ABNINT @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Transient overload syncing ACCORD @ 2026-07-24 (attempt 1/3) — retrying in 1000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Transient overload syncing ACCORD @ 2026-07-24 (attempt 2/3) — retrying in 2000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync ACCORD @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [syncJobs] Transient overload syncing ACTIVEINFR @ 2026-07-24 (attempt 1/3) — retrying in 1000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Transient overload syncing ACTIVEINFR @ 2026-07-24 (attempt 2/3) — retrying in 2000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync ACTIVEINFR @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [liveFeedService] Evicting 1 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Evicting 9 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error'}"}
+[electron] [server] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [syncJobs] Transient overload syncing AGARWALFT @ 2026-07-24 (attempt 1/3) — retrying in 1000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Transient overload syncing AGARWALFT @ 2026-07-24 (attempt 2/3) — retrying in 2000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync AGARWALFT @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Transient overload syncing AHIMSA @ 2026-07-24 (attempt 1/3) — retrying in 1000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Transient overload syncing AHIMSA @ 2026-07-24 (attempt 2/3) — retrying in 2000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync AHIMSA @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Transient overload syncing ALCODIS @ 2026-07-24 (attempt 1/3) — retrying in 1000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [liveFeedService] Evicting 5 oldest unprotected symbol(s) to stay under the 200 cap
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [marketData] /history — broker unavailable: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Transient overload syncing ALCODIS @ 2026-07-24 (attempt 2/3) — retrying in 2000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync ALCODIS @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Transient overload syncing AMIABLE @ 2026-07-24 (attempt 1/3) — retrying in 1000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Transient overload syncing AMIABLE @ 2026-07-24 (attempt 2/3) — retrying in 2000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync AMIABLE @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [marketDataService] ✓ inline fetch NSE:ANIKINDS-EQ 1 2026-07-24→2026-07-24  (367 bars)
+[electron] [server] [syncJobs] Transient overload syncing ARIHANTACA @ 2026-07-24 (attempt 1/3) — retrying in 1000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Transient overload syncing ARIHANTACA @ 2026-07-24 (attempt 2/3) — retrying in 2000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync ARIHANTACA @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Transient overload syncing ASCOM @ 2026-07-24 (attempt 1/3) — retrying in 1000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Transient overload syncing ASCOM @ 2026-07-24 (attempt 2/3) — retrying in 2000ms: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync ASCOM @ 2026-07-24: Fyers history request failed: Fyers REST request failed
+[electron] [server] [syncJobs] Failed to sync ASHIKAG @ 2026-07-24: Fyers history request failed: request limit reached
+[electron] [server] [syncJobs] ... further per-symbol failure lines suppressed; see end-of-loop summary
+[electron] [server] [scheduler] Market is closed and live feed is still connected — stopping it now
+[electron] [server] [liveOptionsTracker] ATM tracking stopped — cleared 0 contracts + 0 index spot subscription(s)
+
