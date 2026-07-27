@@ -61,6 +61,7 @@ type ConditionKey =
   | "ltp-low"
   | "ltp-high"
   | "ltp-close"
+  | "ltp-below-close"
   | "high-open"
   | "low-open"
   | "high-close"

@@ -25,11 +25,14 @@ import {
   apiListAllHoldings,
   apiListAllBookedTrades,
   apiImportPortfolios,
+  apiGetMarketQuotes,
+  apiGetSchedulerStatus,
   type ApiDashboard,
   type ApiPortfolio,
   type ApiHolding,
   type ApiAllHolding,
   type ApiAllBookedTrade,
+  type ApiLiveQuote,
   type ImportPortfolioPayload,
 } from "@/lib/api";
 import type { SymbolHistory } from "@/lib/csv";
@@ -45,11 +48,55 @@ const DASHBOARD_COLORS = [
 
 // ─── Price helpers ────────────────────────────────────────────────────────────
 
-function lookupPrice(histories: SymbolHistory[], symbol: string): { ltp: number | null; prevClose: number | null } {
+type LiveQuoteMap = Record<string, ApiLiveQuote>;
+
+function fyersSymbol(symbol: string): string {
+  return symbol.includes(":") ? symbol : `NSE:${symbol}-EQ`;
+}
+
+function quoteTicker(quote: ApiLiveQuote): string {
+  const base = quote.symbol.includes(":") ? quote.symbol.split(":").pop() ?? quote.symbol : quote.symbol;
+  return base.replace(/-EQ$/i, "").toUpperCase();
+}
+
+function lookupPrice(
+  histories: SymbolHistory[],
+  symbol: string,
+  liveQuotes: LiveQuoteMap = {},
+  liveFeedActive = false,
+): { ltp: number | null; prevClose: number | null; isLive: boolean } {
   const h = histories.find((s) => s.symbol.toUpperCase() === symbol.toUpperCase());
-  if (!h || !h.bars.length) return { ltp: null, prevClose: null };
-  const last = h.bars[h.bars.length - 1];
-  return { ltp: last.close, prevClose: last.prevClose };
+  const fallback = h?.bars.length
+    ? { ltp: h.bars[h.bars.length - 1].close, prevClose: h.bars[h.bars.length - 1].prevClose }
+    : { ltp: null, prevClose: null };
+  const live = liveFeedActive
+    ? liveQuotes[fyersSymbol(symbol)] ?? liveQuotes[symbol] ?? liveQuotes[symbol.toUpperCase()]
+    : undefined;
+  if (live && Number.isFinite(live.ltp) && live.ltp > 0) {
+    return {
+      ltp: live.ltp,
+      prevClose: live.close > 0 ? live.close : fallback.prevClose,
+      isLive: true,
+    };
+  }
+  return { ...fallback, isLive: false };
+}
+
+const LIVE_QUOTE_REFRESH_MS = 15_000;
+const LIVE_QUOTE_BATCH_SIZE = 50;
+
+function LivePriceHeader({ live }: { live: boolean }) {
+  return live ? (
+    <span className="inline-flex items-center gap-1">
+      <span
+        aria-hidden="true"
+        className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.8)]"
+      />
+      LTP
+    </span>
+  ) : (
+    "Close"
+  );
 }
 
 function fmt(n: number | null, decimals = 2): string {
@@ -637,9 +684,9 @@ function AccountInlineInput({ initialValue, onSave, onCancel }: {
 // ─── Individual Portfolio Card ────────────────────────────────────────────────
 
 function PortfolioCard({
-  portfolio, histories, symbols, otherPortfolios = [], onDelete, onEdited,
+  portfolio, histories, liveQuotes, liveFeedActive, symbols, otherPortfolios = [], onDelete, onEdited,
 }: {
-  portfolio: ApiPortfolio; histories: SymbolHistory[]; symbols: string[];
+  portfolio: ApiPortfolio; histories: SymbolHistory[]; liveQuotes: LiveQuoteMap; liveFeedActive: boolean; symbols: string[];
   otherPortfolios?: ApiPortfolio[];
   onDelete: () => void; onEdited: () => void;
 }) {
@@ -743,11 +790,11 @@ function PortfolioCard({
 
   const enriched = useMemo(() =>
     holdings.map((h) => {
-      const { ltp, prevClose } = lookupPrice(histories, h.symbol);
+      const { ltp, prevClose } = lookupPrice(histories, h.symbol, liveQuotes, liveFeedActive);
       const dayPnl = ltp !== null && prevClose !== null ? (ltp - prevClose) * h.qty : null;
       const totalPnl = ltp !== null ? (ltp - h.buy_price) * h.qty : null;
       return { ...h, ltp, prevClose, dayPnl, totalPnl };
-    }), [holdings, histories]);
+    }), [holdings, histories, liveQuotes, liveFeedActive]);
 
   const todayPnl = enriched.reduce((s, h) => s + (h.dayPnl ?? 0), 0);
   const overallPnl = enriched.reduce((s, h) => s + (h.totalPnl ?? 0), 0);
@@ -796,7 +843,7 @@ function PortfolioCard({
                 <th className="text-left px-3 py-1">Symbol</th>
                 <th className="text-right px-3 py-1">Qty</th>
                 <th className="text-right px-3 py-1">Buy Price</th>
-                <th className="text-right px-3 py-1">LTP</th>
+                 <th className="text-right px-3 py-1"><LivePriceHeader live={liveFeedActive} /></th>
                 <th className="text-right px-3 py-1">Day P&L</th>
                 <th className="text-right px-3 py-1">Total P&L</th>
                 <th className="text-center px-3 py-1">Status</th>
@@ -953,11 +1000,21 @@ function PortfolioCard({
 
 // ─── All Accounts Panel ────────────────────────────────────────────────────────
 
-function AllAccountsPanel({ allHoldings, histories }: { allHoldings: ApiAllHolding[]; histories: SymbolHistory[] }) {
+function AllAccountsPanel({
+  allHoldings,
+  histories,
+  liveQuotes,
+  liveFeedActive,
+}: {
+  allHoldings: ApiAllHolding[];
+  histories: SymbolHistory[];
+  liveQuotes: LiveQuoteMap;
+  liveFeedActive: boolean;
+}) {
   const today = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" });
   const enriched = useMemo(() =>
     allHoldings.map((h) => {
-      const { ltp, prevClose } = lookupPrice(histories, h.symbol);
+      const { ltp, prevClose } = lookupPrice(histories, h.symbol, liveQuotes, liveFeedActive);
       const dayPnl = ltp !== null && prevClose !== null ? (ltp - prevClose) * h.qty : null;
       return { ...h, ltp, prevClose, dayPnl };
     }), [allHoldings, histories]);
@@ -1054,10 +1111,10 @@ function TotalBookedPanel({ allBooked }: { allBooked: ApiAllBookedTrade[] }) {
 // ─── Layout 2: Cross-Portfolio View ──────────────────────────────────────────
 
 function CrossPortfolioLayout({
-  portfolios, allHoldings, allBooked, histories, allSymbols,
+  portfolios, allHoldings, allBooked, histories, liveQuotes, liveFeedActive, allSymbols,
 }: {
   portfolios: ApiPortfolio[]; allHoldings: ApiAllHolding[]; allBooked: ApiAllBookedTrade[];
-  histories: SymbolHistory[]; allSymbols: string[];
+  histories: SymbolHistory[]; liveQuotes: LiveQuoteMap; liveFeedActive: boolean; allSymbols: string[];
 }) {
   const qc = useQueryClient();
   const [addingToPortfolio, setAddingToPortfolio] = useState<ApiPortfolio | null>(null);
@@ -1099,7 +1156,7 @@ function CrossPortfolioLayout({
 
   const enriched = useMemo(() =>
     allHoldings.map((h) => {
-      const { ltp, prevClose } = lookupPrice(histories, h.symbol);
+      const { ltp, prevClose } = lookupPrice(histories, h.symbol, liveQuotes, liveFeedActive);
       const dayPnl = ltp !== null && prevClose !== null ? (ltp - prevClose) * h.qty : null;
       const totalPnl = ltp !== null ? (ltp - h.buy_price) * h.qty : null;
       return { ...h, ltp, prevClose, dayPnl, totalPnl };
@@ -1280,7 +1337,7 @@ function CrossPortfolioLayout({
                   <Fragment key={p.id}>
                     <th className={thSub}>Qty</th>
                     <th className={thSub}>Buy</th>
-                    <th className={thSub}>LTP</th>
+                    <th className={thSub}><LivePriceHeader live={liveFeedActive} /></th>
                     <th className={thSub}>Day P&amp;L</th>
                     <th className={`${thSub} ${i < portfolios.length - 1 ? "border-r border-border/80" : ""}`}>Total P&amp;L</th>
                   </Fragment>
@@ -1434,6 +1491,8 @@ function DashboardDetailView({ dashboard, onBack }: { dashboard: ApiDashboard; o
   const qc = useQueryClient();
   const [layout, setLayout] = useState<1 | 2>(2);
   const [showAddPortfolio, setShowAddPortfolio] = useState(false);
+  const [liveQuotes, setLiveQuotes] = useState<LiveQuoteMap>({});
+  const [liveFeedActive, setLiveFeedActive] = useState(false);
 
   const { data: portfolios = [], isLoading, refetch } = useQuery({
     queryKey: ["portfolios", dashboard.id],
@@ -1448,6 +1507,62 @@ function DashboardDetailView({ dashboard, onBack }: { dashboard: ApiDashboard; o
     queryKey: ["allBooked", dashboard.id],
     queryFn: () => apiListAllBookedTrades(dashboard.id),
   });
+
+  const holdingSymbols = useMemo(
+    () => [...new Set(allHoldings.map((holding) => holding.symbol.toUpperCase()))],
+    [allHoldings],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshLivePrices = async () => {
+      try {
+        const status = await apiGetSchedulerStatus();
+        const feedActive = status.liveFeed.marketOpenNow && status.liveFeed.connected;
+
+        if (!feedActive || holdingSymbols.length === 0) {
+          if (!cancelled) {
+            setLiveFeedActive(false);
+            setLiveQuotes({});
+          }
+          return;
+        }
+
+        const nextQuotes: LiveQuoteMap = {};
+        for (let i = 0; i < holdingSymbols.length; i += LIVE_QUOTE_BATCH_SIZE) {
+          const batch = holdingSymbols.slice(i, i + LIVE_QUOTE_BATCH_SIZE);
+          const response = await apiGetMarketQuotes(batch.map(fyersSymbol));
+          for (const quote of response.quotes) {
+            nextQuotes[quote.symbol] = quote;
+            nextQuotes[quote.symbol.toUpperCase()] = quote;
+            nextQuotes[quoteTicker(quote)] = quote;
+          }
+        }
+
+        if (!cancelled) {
+          setLiveFeedActive(true);
+          setLiveQuotes(nextQuotes);
+        }
+      } catch {
+        // Unknown or unavailable live-feed state safely falls back to Close.
+        if (!cancelled) {
+          setLiveFeedActive(false);
+          setLiveQuotes({});
+        }
+      }
+    };
+
+    void refreshLivePrices();
+    const interval = window.setInterval(() => {
+      void refreshLivePrices();
+    }, LIVE_QUOTE_REFRESH_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [holdingSymbols]);
 
   const symbols = useMemo(() => {
     if (histories.length > 0) return [...new Set(histories.map((h) => h.symbol.toUpperCase()))].sort();
@@ -1544,21 +1659,21 @@ function DashboardDetailView({ dashboard, onBack }: { dashboard: ApiDashboard; o
               <>
                 <div className="space-y-2">
                   {portfolios.map((p) => (
-                    <PortfolioCard key={p.id} portfolio={p} histories={histories} symbols={symbols}
+                      <PortfolioCard key={p.id} portfolio={p} histories={histories} liveQuotes={liveQuotes} liveFeedActive={liveFeedActive} symbols={symbols}
                       otherPortfolios={portfolios.filter((x) => x.id !== p.id)}
                       onDelete={() => deletePortfolioMut.mutate(p.id)}
                       onEdited={() => qc.invalidateQueries({ queryKey: ["portfolios", dashboard.id] })} />
                   ))}
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <div><AllAccountsPanel allHoldings={allHoldings} histories={histories} /></div>
+                  <div><AllAccountsPanel allHoldings={allHoldings} histories={histories} liveQuotes={liveQuotes} liveFeedActive={liveFeedActive} /></div>
                   <div className="lg:col-span-2"><TotalBookedPanel allBooked={allBooked} /></div>
                 </div>
               </>
             )}
             {layout === 2 && (
               <CrossPortfolioLayout portfolios={portfolios} allHoldings={allHoldings} allBooked={allBooked}
-                histories={histories} allSymbols={symbols} />
+                histories={histories} liveQuotes={liveQuotes} liveFeedActive={liveFeedActive} allSymbols={symbols} />
             )}
           </>
         )}
