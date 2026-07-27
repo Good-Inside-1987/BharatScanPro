@@ -13,3 +13,4 @@
 - [Completion review stale config](completion-review-stale-config.md) — verify live protected config and runtime directly when completion validation reports an inverted diff.
 - [Broker sync roadmap status](broker-sync-roadmap.md) — steps 1–3 are applied; backfill code exists but Step 4/5 require broker-backed Electron runtime verification.
 - [Electron legacy status endpoints](electron-legacy-status-endpoints.md) — aggregate dashboard APIs must tolerate older per-user SQLite schemas that survive packaged-app upgrades.
+- [Live feed symbol resolution fix](live-feed-symbol-resolution-fix.md) — reconnect storm root cause (wrong -EQ suffix); steps 1+2 done, step 3 (blacklist) pending.
