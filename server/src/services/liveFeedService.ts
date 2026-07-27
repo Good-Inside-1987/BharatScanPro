@@ -848,6 +848,40 @@ export function getProtectedSymbols(): string[] {
 }
 
 /**
+ * Queries the DB for F&O-eligible symbols that have no fyers_symbol value
+ * and emits a console.warn if any are found.  Intended to be called once at
+ * server startup (and again just before autoSubscribeFoSymbols() at market
+ * open) so the operator knows immediately if the symbol master needs to be
+ * synced before the live feed opens.
+ *
+ * A null fyers_symbol means we will fall back to the naive "NSE:{symbol}-EQ"
+ * construction, which Fyers rejects with -300 for SME/BE/ST-segment stocks
+ * and was the root cause of the historical reconnect storm.
+ *
+ * Safe to call at any time — read-only, no side effects.
+ */
+export function logFyersSymbolCoverageWarning(): void {
+  const { cnt } = marketDb
+    .prepare(
+      `SELECT COUNT(*) AS cnt
+         FROM symbols s
+         JOIN (SELECT DISTINCT symbol FROM ohlcv_daily) od ON od.symbol = s.symbol
+        WHERE s.is_fo_eligible = 1
+          AND (s.fyers_symbol IS NULL OR s.fyers_symbol = '')`
+    )
+    .get() as { cnt: number };
+
+  if (cnt > 0) {
+    console.warn(
+      "[liveFeedService] STARTUP WARNING: %d F&O-eligible symbol(s) have no fyers_symbol in DB. " +
+      "These will fall back to NSE:{symbol}-EQ, which Fyers rejects with -300 for SME/BE/ST stocks " +
+      "and can cause a reconnect storm. Run POST /api/symbols/refresh to populate the correct Fyers tickers.",
+      cnt
+    );
+  }
+}
+
+/**
  * Drops the "protected" flag from every symbol without unsubscribing them.
  * Called at market close alongside disconnect() so tomorrow's liveOpen job
  * rebuilds the F&O auto-subscribe list fresh (in case eligibility or prices
@@ -918,24 +952,9 @@ function rankFoSymbolsByPrice(): FoRankedSymbol[] {
     )
     .all() as unknown as FoRankedSymbol[];
 
-  // Warn if any eligible symbols are falling back to the -EQ guess because
-  // the symbol master hasn't been synced on this machine yet. Those rows will
-  // likely produce -300 errors from the Fyers WebSocket for SME/BE stocks.
-  const nullFyersCount = (marketDb
-    .prepare(
-      `SELECT COUNT(*) AS cnt FROM symbols s
-         JOIN (SELECT DISTINCT symbol FROM ohlcv_daily) od ON od.symbol = s.symbol
-        WHERE s.is_fo_eligible = 1 AND (s.fyers_symbol IS NULL OR s.fyers_symbol = '')`
-    )
-    .get() as { cnt: number }).cnt;
-  if (nullFyersCount > 0) {
-    console.warn(
-      "[liveFeedService] %d F&O-eligible symbol(s) have no fyers_symbol in DB — " +
-      "falling back to NSE:{symbol}-EQ which may be rejected by Fyers for SME/BE stocks. " +
-      "Run /api/symbols/refresh to populate the correct Fyers tickers.",
-      nullFyersCount
-    );
-  }
+  // Warn at ranking time too (in addition to the startup check) so the log
+  // is visible close to when the bad subscriptions would actually go out.
+  logFyersSymbolCoverageWarning();
 
   return rows;
 }

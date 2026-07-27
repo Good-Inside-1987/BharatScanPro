@@ -33,6 +33,7 @@ import marketDataRouter from "./routes/marketData.js";
 import symbolsRouter from "./routes/symbols.js";
 import universeRouter from "./routes/universe.js";
 import { startScheduler } from "./services/scheduler.js";
+import { logFyersSymbolCoverageWarning } from "./services/liveFeedService.js";
 
 void appDb;
 void marketDb;
@@ -332,6 +333,10 @@ app.listen(port, () => {
   console.log(`BharatScan server running on http://localhost:${port}`);
   resumeHistoricalBackfillOnStartup();
   startScheduler();
+  // Warn immediately if any F&O-eligible symbols are missing fyers_symbol in
+  // the DB so the operator knows to run /api/symbols/refresh before market open
+  // rather than discovering it via -300 errors when the live feed connects.
+  logFyersSymbolCoverageWarning();
 });
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
