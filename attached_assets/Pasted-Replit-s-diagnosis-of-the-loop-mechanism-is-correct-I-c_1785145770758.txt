@@ -1,0 +1,23 @@
+Replit's diagnosis of the loop mechanism is correct — I can see it clearly in your logs (same batches of symbols: AAKAAR/AARADHYA/AAREYDRUGS... cycling every reconnect, evicting 40-50 symbols each time, hitting request limit reached from the reconnect storm). The blacklist fix is real and worth doing. But it's treating the symptom, not the disease — and I think there's a more specific root cause underneath that Replit's writeup glosses over.
+
+The real question: why are these specific symbols still being built as -EQ?
+
+Your memory shows Prompt 31/32 already fixed toFyersSymbol() to read the fyers_symbol column from Fyers' own CM master CSV instead of hardcoding NSE:{symbol}-EQ — and you confirmed it working (NSE:AAKAAR-SM resolving correctly) after running /api/symbols/refresh.
+
+But these logs — from the new laptop, first run — show NSE:AAKAAR-EQ being rejected, not NSE:AAKAAR-SM. Same for DIVINEHIRA, ARISTO, KOPRAN, and hundreds of others in the same batches that were fixed on your other machine.
+
+That tells me one of two things is happening, and they need different fixes:
+
+This new laptop's market.db has never had /api/symbols/refresh run, so the fyers_symbol column is null/empty for these rows, and whatever code builds the live-feed subscription list is falling back to the old -EQ guess. This is a data/setup issue, not a code bug — you just need to run the refresh on this machine.
+The live feed's subscription-building path (liveFeedService.ts / marketDataService.ts's subscribeSymbols) never uses toFyersSymbol()/fyers_symbol at all — it might have its own separate NSE:{symbol}-EQ construction that Prompt 31 never touched. In that case the fix only ever propagated to the sync/EOD call sites, and the live feed subscription list has been broken (or half-broken) this whole time on both machines, and you didn't notice until now because the sync jobs (which did get the fix) don't hit this path.
+
+I'd bet on #2 being at least partially true, because Prompt 31/32's description in your memory specifically mentions fixing symbol resolution for EOD sync and optionsDataService.ts — nothing about liveFeedService.ts's own symbol construction for live subscriptions. If the live feed subscribes using raw symbols table data and appends -EQ itself rather than reading the already-fixed fyers_symbol column, that would exactly explain this.
+
+What I'd want to see before approving either fix
+The actual code in liveFeedService.ts (or wherever it builds NSE:XXX-EQ for the F&O auto-subscribe list) — specifically, does it query fyers_symbol from the symbols table, or does it construct the ticker itself?
+A quick DB check on this new laptop: SELECT symbol, fyers_symbol FROM symbols WHERE symbol IN ('AAKAAR','DIVINEHIRA','ARISTO') LIMIT 5; — if fyers_symbol is null/empty here, it's a refresh-not-run issue (fix: run /api/symbols/refresh on this machine); if it's populated correctly but still failing, it's a code path that ignores the column.
+On Replit's blacklist proposal itself
+
+It's a good defensive addition regardless of the above — even with symbol resolution perfect, Fyers will occasionally suspend/delist something mid-session, and a blacklist (in-memory + persisted to a fyers_invalid_symbols table or is_delisted-style flag) stops the reconnect storm from burning your quota. I'd approve prompts 1 and 2 from their proposal as written. But I'd hold off on treating this as "the fix" until you've confirmed whether it's masking the symbol-resolution regression above — otherwise you'll silently blacklist hundreds of perfectly valid, currently-listed stocks just because the live feed is guessing their suffix wrong, and your F&O auto-subscribe pool will quietly shrink over time.
+
+Want to pull the liveFeedService.ts subscription-building code and that DB query result so I can confirm which of the two it is?
