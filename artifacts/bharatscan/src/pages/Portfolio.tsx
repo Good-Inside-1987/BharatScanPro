@@ -1017,7 +1017,7 @@ function AllAccountsPanel({
       const { ltp, prevClose } = lookupPrice(histories, h.symbol, liveQuotes, liveFeedActive);
       const dayPnl = ltp !== null && prevClose !== null ? (ltp - prevClose) * h.qty : null;
       return { ...h, ltp, prevClose, dayPnl };
-    }), [allHoldings, histories]);
+    }), [allHoldings, histories, liveQuotes, liveFeedActive]);
   const totalDayPnl = enriched.reduce((s, h) => s + (h.dayPnl ?? 0), 0);
   return (
     <Card className="shadow-card overflow-hidden">
@@ -1541,7 +1541,12 @@ function DashboardDetailView({ dashboard, onBack }: { dashboard: ApiDashboard; o
         }
 
         if (!cancelled) {
-          setLiveFeedActive(true);
+          // Only mark feed as active when we actually received quotes.
+          // An empty response (e.g. first call before WebSocket ticks arrive)
+          // must not set liveFeedActive=true — that would show the green "LTP"
+          // dot while actually falling back to stale histories close prices.
+          const hasQuotes = Object.keys(nextQuotes).length > 0;
+          setLiveFeedActive(hasQuotes);
           setLiveQuotes(nextQuotes);
         }
       } catch {
