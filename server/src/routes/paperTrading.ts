@@ -85,6 +85,22 @@ async function computeAccountStats(accountId: string) {
   return { invested, realizedPnl: trades.total, openPositions: positions.length, totalUnrealizedPnl };
 }
 
+// ── Live quotes for paper trading order dialog ───────────────────────────────
+
+router.get("/quotes", async (req: Request, res: Response) => {
+  const raw = req.query.symbols as string | undefined;
+  if (!raw?.trim()) { res.status(400).json({ error: "symbols query param required" }); return; }
+  const symbols = raw.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
+  if (!symbols.length) { res.status(400).json({ error: "symbols query param required" }); return; }
+  try {
+    const quotes = await getLiveQuotes(symbols);
+    res.json(quotes);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Quote fetch failed";
+    res.status(503).json({ error: msg });
+  }
+});
+
 // ── Accounts ─────────────────────────────────────────────────────────────────
 
 router.get("/accounts", async (_req: Request, res: Response) => {

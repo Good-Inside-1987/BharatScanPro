@@ -13,7 +13,7 @@ import {
   apiListPaperAccounts, apiCreatePaperAccount, apiUpdatePaperAccount,
   apiDeletePaperAccount, apiResetPaperAccount,
   apiListPaperPositions, apiOpenPaperPosition, apiClosePaperPosition,
-  apiListPaperTrades,
+  apiListPaperTrades, apiGetPaperQuotes,
   type ApiPaperAccount, type ApiPaperPosition, type ApiPaperTrade,
   type InstrumentType, type PositionSide, type OptionType,
 } from "@/lib/api";
@@ -350,7 +350,9 @@ export default function PaperTrading() {
 
   const positionsWithPnl = useMemo(() => {
     return positions.map((p) => {
-      const ltp = getCurrentLtp(p);
+      // Prefer backend-enriched current_price (from live broker quotes via getLiveQuotes),
+      // fall back to client-side lookup from CSV/DB history.
+      const ltp = p.current_price ?? getCurrentLtp(p);
       const pnl = ltp === null ? null : p.side === "long"
         ? (ltp - p.entry_price) * p.qty * p.lot_size
         : (p.entry_price - ltp) * p.qty * p.lot_size;
@@ -518,7 +520,7 @@ export default function PaperTrading() {
 
       <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/30 border border-border rounded-lg px-3 py-1">
         <Radio className="h-3 w-3 text-primary shrink-0" />
-        P&L refreshes every 1 minute from the latest loaded price data. Live streaming will switch on automatically once the Angel One SmartAPI feed is connected — no changes needed on your side.
+        P&L refreshes every 1 minute from the latest broker quote. Live streaming will switch on automatically once the Fyers feed is connected — no changes needed on your side.
       </div>
 
       {!account ? (
@@ -1037,7 +1039,8 @@ function NewTradeModal({
     if (ls) setLotSize(String(ls));
   }, [underlying, expiry, csvLotSizes]);
 
-  const autoPrice = useMemo(() => {
+  // CSV/DB-derived price — used as fallback when broker is offline
+  const csvAutoPrice = useMemo(() => {
     if (instrumentType === "stock") {
       if (!symbol) return null;
       return getStockLtp(histories, symbol, asOfDate);
@@ -1053,6 +1056,27 @@ function NewTradeModal({
     }
     return best?.close ?? null;
   }, [instrumentType, symbol, underlying, expiry, strike, optionType, histories, optionsData, asOfDate, asOfOptionsDate]);
+
+  // Live broker quote — fetched whenever a stock symbol is chosen
+  const quoteSymbol = instrumentType === "stock" ? symbol : null;
+  const { data: liveQuoteData } = useQuery({
+    queryKey: ["paper-live-quote", quoteSymbol],
+    queryFn: () => apiGetPaperQuotes([quoteSymbol as string]),
+    enabled: !!quoteSymbol,
+    staleTime: 30_000,
+    retry: false,
+    // Don't throw — silently fall back to CSV price if broker unavailable
+  });
+  const liveQuote = liveQuoteData?.[0] ?? null;
+
+  // autoPrice: prefer live broker LTP, fall back to CSV
+  const autoPrice = (liveQuote?.ltp ?? csvAutoPrice);
+  // prevClosePrice: use real broker prev-close (Quote.close = yesterday's close in Fyers)
+  const prevClosePrice: number | null = liveQuote?.close ?? null;
+  const priceDiff = autoPrice !== null && prevClosePrice !== null ? autoPrice - prevClosePrice : null;
+  const priceDiffPct = priceDiff !== null && prevClosePrice !== null && prevClosePrice > 0
+    ? (priceDiff / prevClosePrice) * 100
+    : null;
 
   useEffect(() => {
     if (!limitPriceTouched && autoPrice !== null) {
@@ -1082,10 +1106,6 @@ function NewTradeModal({
     : underlying && expiry && strike
       ? `${underlying} ${fmtDate(expiry)} ${strike} ${optionType}`
       : (underlying || "—");
-
-  const prevClosePrice = autoPrice !== null ? autoPrice * 0.98 : null;
-  const priceDiff = autoPrice !== null && prevClosePrice !== null ? autoPrice - prevClosePrice : null;
-  const priceDiffPct = autoPrice !== null && prevClosePrice !== null ? (priceDiff! / prevClosePrice) * 100 : null;
 
   const canSubmit = (() => {
     const hasSymbol = instrumentType === "stock" ? !!symbol : (!!underlying && !!expiry && strike !== null);

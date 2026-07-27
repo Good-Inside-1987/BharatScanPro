@@ -769,6 +769,9 @@ export interface ApiPaperPosition {
   status: string;
   created_at: string;
   updated_at: string;
+  // Enriched by backend via getLiveQuotes — present on GET positions, null when broker unavailable
+  current_price: number | null;
+  unrealized_pnl: number | null;
 }
 
 export interface ApiPaperTrade {
@@ -809,6 +812,11 @@ export const apiResetPaperAccount = (id: string) =>
 
 export const apiListPaperPositions = (accountId: string) =>
   request<ApiPaperPosition[]>(`/paper-trading/accounts/${accountId}/positions`);
+
+export const apiGetPaperQuotes = (symbols: string[]) =>
+  request<Array<{ symbol: string; ltp: number; open: number; high: number; low: number; close: number; volume: number; timestamp: string }>>(
+    `/paper-trading/quotes?symbols=${symbols.map(encodeURIComponent).join(",")}`
+  );
 
 export const apiOpenPaperPosition = (
   accountId: string,
