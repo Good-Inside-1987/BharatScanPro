@@ -481,6 +481,22 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let intentionallyClosed = false;
 
 /**
+ * In-memory blacklist of Fyers-format symbols that were rejected by the
+ * Fyers WebSocket with error code -300 ("Please provide a valid symbol")
+ * during the current session.  Populated when Fyers reports invalid_symbols
+ * in an error frame; checked in subscribeSymbols() so we never re-submit a
+ * known-bad symbol and waste reconnect budget.
+ *
+ * This is intentionally in-memory only:
+ *  - Symbols can be temporarily invalid (circuit breaker, suspension), so we
+ *    don't want them permanently blocked across restarts.
+ *  - It is cleared nightly via clearInvalidSymbolBlacklist() (called from the
+ *    market-close job alongside clearProtectedSymbols()) so each trading day
+ *    starts clean.
+ */
+const fyersInvalidSymbols = new Set<string>();
+
+/**
  * Normalises a symbol to the Fyers exchange-prefixed format.
  * Symbols that already contain ":" are returned unchanged (e.g. NSE:NIFTY50-INDEX,
  * NSE:RELIANCE-EQ, option contracts like NSE:NIFTY24DEC25000CE).
@@ -670,6 +686,9 @@ export async function connect(): Promise<void> {
               invalidSymbols.join(", ")
             );
             subscriptions.remove(invalidSymbols);
+            // Add to session blacklist so subscribeSymbols() never re-submits
+            // them and triggers another -300 → reconnect cycle.
+            for (const s of invalidSymbols) fyersInvalidSymbols.add(s);
           }
         }
       }
@@ -771,7 +790,22 @@ export function subscribeSymbols(
   // option contracts) are passed through unchanged.
   const normalised = symbols.map(toFyersSymbol);
 
-  const { added, evicted, rejected } = subscriptions.add(normalised, options);
+  // Drop any symbols that Fyers already rejected with -300 this session.
+  // Without this guard a caller that re-requests the same bad symbol on every
+  // request would re-add it to the subscription list, trigger another -300
+  // error on the next reconnect, and spin indefinitely.
+  const blacklisted = normalised.filter((s) => fyersInvalidSymbols.has(s));
+  if (blacklisted.length > 0) {
+    console.warn(
+      "[liveFeedService] Skipping %d session-blacklisted symbol(s) (previously rejected by Fyers with -300): %s",
+      blacklisted.length,
+      blacklisted.join(", ")
+    );
+  }
+  const safe = normalised.filter((s) => !fyersInvalidSymbols.has(s));
+  if (safe.length === 0) return { added: [], evicted: [], rejected: normalised };
+
+  const { added, evicted, rejected } = subscriptions.add(safe, options);
 
   if (evicted.length > 0) {
     console.log(`[liveFeedService] Evicting ${evicted.length} oldest unprotected symbol(s) to stay under the 200 cap`);
@@ -821,6 +855,24 @@ export function getProtectedSymbols(): string[] {
  */
 export function clearProtectedSymbols(): void {
   subscriptions.clearProtected();
+  // Also reset the session invalid-symbol blacklist so that stocks that were
+  // only temporarily invalid (circuit breaker, intraday suspension) get a
+  // fresh chance at the start of the next trading day.
+  clearInvalidSymbolBlacklist();
+}
+
+/**
+ * Clears the in-memory set of symbols that Fyers rejected with -300 this
+ * session.  Normally called automatically by clearProtectedSymbols() at
+ * market close, but exposed here so tests or admin routes can reset it
+ * explicitly if needed.
+ */
+export function clearInvalidSymbolBlacklist(): void {
+  const count = fyersInvalidSymbols.size;
+  fyersInvalidSymbols.clear();
+  if (count > 0) {
+    console.log("[liveFeedService] Cleared %d session-blacklisted symbol(s)", count);
+  }
 }
 
 interface FoRankedSymbol {
