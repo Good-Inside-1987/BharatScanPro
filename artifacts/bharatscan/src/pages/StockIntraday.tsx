@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AlertCircle,
   Database,
@@ -21,7 +21,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { useData } from "@/context/DataContext";
-import { apiGetMarketQuotes, type ApiLiveQuote } from "@/lib/api";
+import { apiGetMarketQuotes, apiGetSchedulerStatus, type ApiLiveQuote } from "@/lib/api";
 import type { UniverseCategory } from "@/lib/universe";
 
 const QUOTE_BATCH_SIZE = 50;
@@ -188,7 +188,7 @@ function TableHeader({
   align = "right",
   className = "",
 }: {
-  label: string;
+  label: ReactNode;
   align?: "left" | "center" | "right";
   className?: string;
 }) {
@@ -346,6 +346,7 @@ export default function StockIntraday() {
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [liveFeedActive, setLiveFeedActive] = useState(false);
 
   const stockUniverses = useMemo<UniverseCategory[]>(() => categories, [categories]);
 
@@ -415,6 +416,32 @@ export default function StockIntraday() {
     // The selected universe is the only input that should restart the polling loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUniverseId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshLiveFeedState = async () => {
+      try {
+        const status = await apiGetSchedulerStatus();
+        if (!cancelled) {
+          setLiveFeedActive(status.liveFeed.marketOpenNow && status.liveFeed.connected);
+        }
+      } catch {
+        // The safe fallback is "Close" whenever the live-feed state is unknown.
+        if (!cancelled) setLiveFeedActive(false);
+      }
+    };
+
+    void refreshLiveFeedState();
+    const interval = window.setInterval(() => {
+      void refreshLiveFeedState();
+    }, REFRESH_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const quoteCount = rows.filter((row) => row.quote).length;
   const addConditionColumn = () => {
@@ -538,7 +565,23 @@ export default function StockIntraday() {
                         <TableHeader label="Open" align="right" className="w-[82px]" />
                         <TableHeader label="High" align="right" className="w-[82px]" />
                         <TableHeader label="Low" align="right" className="w-[82px]" />
-                        <TableHeader label="LTP" align="right" className="w-[82px]" />
+                         <TableHeader
+                           label={
+                             liveFeedActive ? (
+                               <span className="inline-flex items-center gap-1">
+                                 <span
+                                   aria-hidden="true"
+                                   className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.8)]"
+                                 />
+                                 LTP
+                               </span>
+                             ) : (
+                               "Close"
+                             )
+                           }
+                           align="right"
+                           className="w-[82px]"
+                         />
                         <TableHeader label="Volume" align="right" className="w-[92px]" />
                        {conditionColumns.map((column) => {
                          return (
