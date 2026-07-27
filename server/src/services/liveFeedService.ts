@@ -825,6 +825,12 @@ export function clearProtectedSymbols(): void {
 
 interface FoRankedSymbol {
   symbol: string;
+  /** Fyers-format symbol ready to send to the WebSocket (e.g. "NSE:AAKAAR-SM").
+   *  Sourced from the fyers_symbol column written by symbolMasterService when it
+   *  parses Fyers' own NSE_CM.csv — falls back to the conventional "NSE:{symbol}-EQ"
+   *  construction only for rows where that column is still null (i.e. symbol master
+   *  has never been synced on this machine). */
+  resolved_symbol: string;
   price: number;
 }
 
@@ -832,11 +838,18 @@ interface FoRankedSymbol {
  * Ranks all F&O-eligible symbols by their most recent known daily close
  * price (ascending). Symbols with no ohlcv_daily row yet are excluded
  * entirely rather than guessed at.
+ *
+ * resolved_symbol uses the fyers_symbol column (populated by symbolMasterService
+ * from Fyers' NSE_CM.csv) so that SME/BE/ST-series stocks get their correct
+ * exchange suffix (e.g. -SM, -BE) instead of the naive -EQ fallback that the
+ * Fyers WebSocket rejects with code -300.
  */
 function rankFoSymbolsByPrice(): FoRankedSymbol[] {
-  return marketDb
+  const rows = marketDb
     .prepare(
-      `SELECT s.symbol AS symbol, latest.close AS price
+      `SELECT s.symbol AS symbol,
+              COALESCE(s.fyers_symbol, 'NSE:' || s.symbol || '-EQ') AS resolved_symbol,
+              latest.close AS price
          FROM symbols s
          JOIN (
            SELECT od.symbol, od.close
@@ -852,6 +865,27 @@ function rankFoSymbolsByPrice(): FoRankedSymbol[] {
         ORDER BY latest.close ASC`
     )
     .all() as unknown as FoRankedSymbol[];
+
+  // Warn if any eligible symbols are falling back to the -EQ guess because
+  // the symbol master hasn't been synced on this machine yet. Those rows will
+  // likely produce -300 errors from the Fyers WebSocket for SME/BE stocks.
+  const nullFyersCount = (marketDb
+    .prepare(
+      `SELECT COUNT(*) AS cnt FROM symbols s
+         JOIN (SELECT DISTINCT symbol FROM ohlcv_daily) od ON od.symbol = s.symbol
+        WHERE s.is_fo_eligible = 1 AND (s.fyers_symbol IS NULL OR s.fyers_symbol = '')`
+    )
+    .get() as { cnt: number }).cnt;
+  if (nullFyersCount > 0) {
+    console.warn(
+      "[liveFeedService] %d F&O-eligible symbol(s) have no fyers_symbol in DB — " +
+      "falling back to NSE:{symbol}-EQ which may be rejected by Fyers for SME/BE stocks. " +
+      "Run /api/symbols/refresh to populate the correct Fyers tickers.",
+      nullFyersCount
+    );
+  }
+
+  return rows;
 }
 
 export interface FoAutoSubscribeResult {
@@ -878,7 +912,9 @@ export interface FoAutoSubscribeResult {
  */
 export function autoSubscribeFoSymbols(limit: number = MAX_SUBSCRIBED_SYMBOLS): FoAutoSubscribeResult {
   const ranked = rankFoSymbolsByPrice();
-  const chosen = ranked.slice(0, limit).map((r) => r.symbol);
+  // Use resolved_symbol (sourced from fyers_symbol in the DB) so SME/BE/ST
+  // stocks get their correct Fyers suffix instead of the naive -EQ fallback.
+  const chosen = ranked.slice(0, limit).map((r) => r.resolved_symbol);
 
   const result = subscribeSymbols(chosen, { protect: true });
 
