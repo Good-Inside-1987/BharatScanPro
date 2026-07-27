@@ -1160,7 +1160,7 @@ function CrossPortfolioLayout({
       const dayPnl = ltp !== null && prevClose !== null ? (ltp - prevClose) * h.qty : null;
       const totalPnl = ltp !== null ? (ltp - h.buy_price) * h.qty : null;
       return { ...h, ltp, prevClose, dayPnl, totalPnl };
-    }), [allHoldings, histories]);
+    }), [allHoldings, histories, liveQuotes, liveFeedActive]);
 
   const symbols = useMemo(() => {
     const seen = new Set<string>(); const out: string[] = [];
