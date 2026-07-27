@@ -832,7 +832,25 @@ export async function getLiveQuotes(symbols: string[]): Promise<Quote[]> {
 
       // Subscribe these symbols so future requests are served from the live
       // cache instead of REST (respects the 200-symbol cap/rotation).
-      subscribeSymbols(missing);
+      // Resolve any bare tickers (e.g. "RELIANCE") to their correct Fyers
+      // symbol (e.g. "NSE:RELIANCE-EQ" or "NSE:AAKAAR-SM") using the
+      // fyers_symbol column populated by symbolMasterService.  Already-
+      // prefixed symbols (containing ":") are passed through unchanged.
+      const bareTickerMissing = missing.filter((s) => !s.includes(":"));
+      let resolvedMissing = missing;
+      if (bareTickerMissing.length > 0) {
+        const placeholders = bareTickerMissing.map(() => "?").join(",");
+        const rows = marketDb
+          .prepare(
+            `SELECT symbol, fyers_symbol FROM symbols WHERE symbol IN (${placeholders})`
+          )
+          .all(...bareTickerMissing) as { symbol: string; fyers_symbol: string | null }[];
+        const fyersMap = new Map(rows.map((r) => [r.symbol, r.fyers_symbol]));
+        resolvedMissing = missing.map((s) =>
+          s.includes(":") ? s : fyersMap.get(s) ?? `NSE:${s}-EQ`
+        );
+      }
+      subscribeSymbols(resolvedMissing);
     }
   }
 
