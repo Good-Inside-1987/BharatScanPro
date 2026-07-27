@@ -136,6 +136,7 @@ const CONDITION_OPTIONS: ConditionDefinition[] = [
   { key: "ltp-low", label: "LTP>LOW", matches: (quote) => quote.ltp > quote.low && quote.ltp > 0 && quote.low > 0 },
   { key: "ltp-high", label: "LTP>HIGH", matches: (quote) => quote.ltp > quote.high && quote.ltp > 0 && quote.high > 0 },
   { key: "ltp-close", label: "LTP>PRV CLOSE", matches: (quote) => quote.ltp > quote.close && quote.ltp > 0 && quote.close > 0 },
+  { key: "ltp-below-close", label: "LTP<PRV CLOSE", matches: (quote) => quote.ltp < quote.close && quote.ltp > 0 && quote.close > 0 },
   { key: "high-open", label: "HIGH>OPEN", matches: (quote) => quote.high > quote.open && quote.high > 0 && quote.open > 0 },
   { key: "low-open", label: "LOW<OPEN", matches: (quote) => quote.low < quote.open && quote.low > 0 && quote.open > 0 },
   { key: "high-close", label: "HIGH>PRV CLOSE", matches: (quote) => quote.high > quote.close && quote.high > 0 && quote.close > 0 },
