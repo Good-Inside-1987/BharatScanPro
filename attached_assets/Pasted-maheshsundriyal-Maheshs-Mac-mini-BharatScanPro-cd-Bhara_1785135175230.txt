@@ -1,0 +1,575 @@
+maheshsundriyal@Maheshs-Mac-mini BharatScanPro % cd ~/BharatScanPro/BharatScanPro
+git pull
+remote: Enumerating objects: 13, done.
+remote: Counting objects: 100% (13/13), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 7 (delta 5), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 609 bytes | 50.00 KiB/s, done.
+From https://github.com/Good-Inside-1987/BharatScanPro
+   0f6d656..fd7242a  main       -> origin/main
+Updating 0f6d656..fd7242a
+Fast-forward
+ artifacts/bharatscan/src/pages/StockIntraday.tsx | 1 +
+ 1 file changed, 1 insertion(+)
+maheshsundriyal@Maheshs-Mac-mini BharatScanPro % pnpm install
+Scope: all 5 workspace projects
+Already up to date
+Done in 187ms using pnpm v11.17.0
+maheshsundriyal@Maheshs-Mac-mini BharatScanPro % cd electron && npm install
+
+up to date, audited 245 packages in 3s
+
+35 packages are looking for funding
+  run `npm fund` for details
+
+23 vulnerabilities (22 high, 1 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+npm warn allow-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn allow-scripts   electron@40.10.6 (install: (install scripts present))
+npm warn allow-scripts
+npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.
+maheshsundriyal@Maheshs-Mac-mini electron % cd ~/BharatScanPro/BharatScanPro
+pnpm run electron:dev
+$ concurrently --kill-others-on-fail --names "vite,electron" -c "cyan,magenta" "pnpm --filter @workspace/bharatscan run dev" "pnpm --dir electron run dev"
+[electron] $ electron .
+[vite] $ vite --config vite.config.ts --host 0.0.0.0
+[vite] 
+[vite]   VITE v7.3.2  ready in 115 ms
+[vite] 
+[vite]   ➜  Local:   http://localhost:5173/
+[vite]   ➜  Network: http://192.168.29.176:5173/
+[electron] [electron] Data directory: /Users/maheshsundriyal/Library/Application Support/BharatScan/bharatscan-data
+[electron] [electron] isDev: true — loading from http://localhost:5173
+[electron] [server] ◇ injected env (4) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+[electron] [server] [migrate] No bharatscan.db found — skipping migration
+[electron] [server] BharatScan server running on http://localhost:3001
+[electron] [server] [catchUpScheduler] Startup catch-up: 1 missed job/day runs to process
+[electron] [server] [catchUpScheduler] Daily request budget exhausted — stopping catch-up at 0/1 (resumes on next startup or periodic check)
+[electron] [server] [catchUpScheduler] Periodic check: 1 job(s) due today with no successful run yet — retrying
+[electron] [server] [catchUpScheduler] Daily request budget exhausted — pausing periodic retries
+[electron] [server] [scheduler] Market is open and live feed isn't connected — starting it now
+[electron] [scheduler] Market open — live feed budget: 85 F&O stocks + 115 options slots (ATM ±5, 5 indices)
+[electron] [server] [liveFeedService] F&O auto-subscribe: 0/0 lowest-priced symbols subscribed (0 eligible with a known price)
+[electron] [server] [liveOptionsTracker] Initialising ATM option subscriptions for 5 index/indices (window ±5, budget 115/200 slots)
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-28 for NIFTY (already resolved today)
+[electron] [electron] ✓ Express server ready at http://localhost:3001/api/health
+[electron] [electron] ✓ Vite dev server ready at localhost: 5173
+[electron] [server] [liveOptionsTracker] No spot price in chain for NIFTY — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-28 for BANKNIFTY (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for BANKNIFTY — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-28 for FINNIFTY (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for FINNIFTY — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-30 for SENSEX (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for SENSEX — skipping
+[electron] [server] [liveOptionsTracker] No spot price in chain for MIDCPNIFTY — skipping
+[electron] [server] [liveOptionsTracker] Init complete — 0 indices tracked, 0 contracts + 0 index spots subscribed
+[electron] [liveOptionsTracker] ATM roll tracking started (interval 120s)
+[electron] [server] [marketData] /scanner/universe-data — 2923 symbols, 218747 bars (2024-07-27 → 2026-07-27)
+[electron] [server] [marketData] /scanner/options-universe-data — 2 underlyings, 182 daily bars (2024-07-27 → 2026-07-27)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] 2026-07-27 12:13:42.335 Electron[1911:48101] representedObject is not a WeakPtrToElectronMenuModelAsNSObject
+[electron] 2026-07-27 12:13:57.325 Electron[1911:48101] representedObject is not a WeakPtrToElectronMenuModelAsNSObject
+[electron] 2026-07-27 12:13:57.326 Electron[1911:48101] representedObject is not a WeakPtrToElectronMenuModelAsNSObject
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [server] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [server] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [server] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [scheduler] Market is open and live feed isn't connected — starting it now
+[electron] [scheduler] Market open — live feed budget: 85 F&O stocks + 115 options slots (ATM ±5, 5 indices)
+[electron] [server] [liveFeedService] F&O auto-subscribe: 0/0 lowest-priced symbols subscribed (0 eligible with a known price)
+[electron] [server] [liveOptionsTracker] Initialising ATM option subscriptions for 5 index/indices (window ±5, budget 115/200 slots)
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-28 for NIFTY (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for NIFTY — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-28 for BANKNIFTY (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for BANKNIFTY — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-28 for FINNIFTY (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for FINNIFTY — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-30 for SENSEX (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for SENSEX — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-28 for MIDCPNIFTY (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for MIDCPNIFTY — skipping
+[electron] [server] [liveOptionsTracker] Init complete — 0 indices tracked, 0 contracts + 0 index spots subscribed
+[electron] [liveOptionsTracker] ATM roll tracking started (interval 120s)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [server] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [server] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [server] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [server] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [scheduler] Market is open and live feed isn't connected — starting it now
+[electron] [server] [scheduler] Market open — live feed budget: 85 F&O stocks + 115 options slots (ATM ±5, 5 indices)
+[electron] [server] [liveFeedService] F&O auto-subscribe: 0/0 lowest-priced symbols subscribed (0 eligible with a known price)
+[electron] [server] [liveOptionsTracker] Skipping re-init — last attempt was 120s ago (cooldown 300s)
+[electron] [server] [liveOptionsTracker] ATM roll tracking started (interval 120s)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [scheduler] Market is open and live feed isn't connected — starting it now
+[electron] [scheduler] Market open — live feed budget: 85 F&O stocks + 115 options slots (ATM ±5, 5 indices)
+[electron] [server] [liveFeedService] F&O auto-subscribe: 0/0 lowest-priced symbols subscribed (0 eligible with a known price)
+[electron] [server] [liveOptionsTracker] Skipping re-init — last attempt was 240s ago (cooldown 300s)
+[electron] [liveOptionsTracker] ATM roll tracking started (interval 120s)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [server] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] 2026-07-27 12:20:48.700 Electron[1911:48101] representedObject is not a WeakPtrToElectronMenuModelAsNSObject
+[electron] 2026-07-27 12:20:48.700 Electron[1911:48101] representedObject is not a WeakPtrToElectronMenuModelAsNSObject
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [scheduler] Market is open and live feed isn't connected — starting it now
+[electron] [scheduler] Market open — live feed budget: 85 F&O stocks + 115 options slots (ATM ±5, 5 indices)
+[electron] [server] [liveFeedService] F&O auto-subscribe: 0/0 lowest-priced symbols subscribed (0 eligible with a known price)
+[electron] [server] [liveOptionsTracker] Initialising ATM option subscriptions for 5 index/indices (window ±5, budget 115/200 slots)
+[electron] [liveOptionsTracker] Using cached expiry 2026-07-28 for NIFTY (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for NIFTY — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-28 for BANKNIFTY (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for BANKNIFTY — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-28 for FINNIFTY (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for FINNIFTY — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-30 for SENSEX (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for SENSEX — skipping
+[electron] [server] [liveOptionsTracker] Using cached expiry 2026-07-28 for MIDCPNIFTY (already resolved today)
+[electron] [server] [liveOptionsTracker] No spot price in chain for MIDCPNIFTY — skipping
+[electron] [server] [liveOptionsTracker] Init complete — 0 indices tracked, 0 contracts + 0 index spots subscribed
+[electron] [liveOptionsTracker] ATM roll tracking started (interval 120s)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
+[electron] [server] [liveFeedService] Connected to Fyers data feed (Python bridge)
+[electron] [server] [liveFeedService] Bridge control: {"__control__": "error", "detail": "{'code': -300, 'message': 'Please provide a valid symbol', 's': 'error', 'type': 'sub', 'invalid_symbols': ['RELIANCE']}"}
+[electron] [liveFeedService] Reconnecting in 1000ms (attempt 1)
