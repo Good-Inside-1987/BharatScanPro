@@ -1,0 +1,35 @@
+Confirmed — this is exactly hypothesis #2, and it's the real root cause.
+
+The smoking gun
+typescript
+function toFyersSymbol(symbol: string): string {
+  return symbol.includes(":") ? symbol : `NSE:${symbol}-EQ`;
+}
+
+This is a second, independent toFyersSymbol() living entirely inside liveFeedService.ts. It has nothing to do with the toFyersSymbol() that Prompt 31 fixed (which presumably lives in marketDataService.ts or a shared symbol-resolution module and correctly reads the fyers_symbol column). This one never got touched. It still hardcodes NSE:{symbol}-EQ for every non-prefixed symbol, exactly like the pre-Prompt-31 bug.
+
+And it's not a dead code path — it's actively used by the highest-volume subscriber:
+
+typescript
+function rankFoSymbolsByPrice(): FoRankedSymbol[] {
+  return marketDb.prepare(`SELECT s.symbol AS symbol, ... FROM symbols s ...`)...
+}
+
+export function autoSubscribeFoSymbols(...) {
+  const ranked = rankFoSymbolsByPrice();          // bare symbols, e.g. "AAKAAR"
+  const chosen = ranked.slice(0, limit).map(r => r.symbol);
+  const result = subscribeSymbols(chosen, { protect: true });  // → toFyersSymbol() → "NSE:AAKAAR-EQ" ❌
+}
+
+rankFoSymbolsByPrice() pulls the bare symbol column (not fyers_symbol), and subscribeSymbols() runs every one of those through the local naive toFyersSymbol(). So every SME/BE/ST-series stock in your F&O-eligible, lowest-priced universe gets built as -EQ and rejected by Fyers — precisely the AAKAAR, DIVINEHIRA, ARISTO, KOPRAN pattern you're seeing, batch after batch, forever, because the eviction/reconnect cycle keeps re-selecting the same cheap stocks from the same ranked list.
+
+Why this wasn't caught before
+
+Prompt 31/32 fixed symbol resolution for EOD sync and options sync — both of which likely go through marketDataService.ts's adapter layer. liveFeedService.ts was explicitly built as a separate, protocol-isolated module (per its own header comment) and nobody re-ran the symbol-fix audit against it. It has its own local copy of the same naive logic the other fix replaced.
+
+The correct fix (in order)
+Make liveFeedService.ts use the real, fixed symbol resolution instead of its own toFyersSymbol(). Either import the shared fixed version, or change rankFoSymbolsByPrice()'s query to SELECT s.fyers_symbol AS symbol (falling back to the old logic only if fyers_symbol is null) and drop the local naive function entirely.
+Add the invalid-symbol blacklist Replit proposed anyway — as defense-in-depth for symbols that are correctly resolved but later get delisted/suspended mid-session. It's a legitimate second layer, just not the primary fix.
+Skip persisting the blacklist to a new DB table for now — you already have is_delisted derived from CSV presence (Prompt 32); an in-memory Set cleared on restart is sufficient once #1 stops the flood at the source.
+
+Want me to write the exact prompt for Replit AI specifying both fixes with the precise line-level change to rankFoSymbolsByPrice() and toFyersSymbol()?
