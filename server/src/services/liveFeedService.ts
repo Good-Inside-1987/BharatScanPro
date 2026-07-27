@@ -480,6 +480,18 @@ let reconnectAttempt = 0;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let intentionallyClosed = false;
 
+/**
+ * Normalises a symbol to the Fyers exchange-prefixed format.
+ * Symbols that already contain ":" are returned unchanged (e.g. NSE:NIFTY50-INDEX,
+ * NSE:RELIANCE-EQ, option contracts like NSE:NIFTY24DEC25000CE).
+ * Bare tickers like "RELIANCE" become "NSE:RELIANCE-EQ".
+ * This prevents bare tickers from reaching the Fyers WebSocket, which rejects them
+ * with code -300 ("Please provide a valid symbol") and crashes the connection.
+ */
+function toFyersSymbol(symbol: string): string {
+  return symbol.includes(":") ? symbol : `NSE:${symbol}-EQ`;
+}
+
 /** JSON control line sent to the Python bridge's stdin to subscribe. */
 function buildSubscribeMessage(symbols: string[]): string {
   return JSON.stringify({ action: "subscribe", symbols, mode: "full" });
@@ -641,6 +653,27 @@ export async function connect(): Promise<void> {
     if (msg.__control__ === "error" || msg.__control__ === "closed") {
       clearTimeout(handshakeTimer);
       console.warn("[liveFeedService] Bridge control: %s", line);
+
+      // If Fyers reported specific invalid symbols (code -300), remove them
+      // from the subscription list NOW — before the reconnect — so the next
+      // connect attempt doesn't re-subscribe the same bad symbols and loop
+      // forever.  The detail field is a stringified Python dict, e.g.:
+      //   "{'code': -300, ..., 'invalid_symbols': ['RELIANCE']}"
+      if (msg.__control__ === "error" && typeof msg.detail === "string") {
+        const invalidMatch = /invalid_symbols['":\s]+\[([^\]]+)\]/.exec(msg.detail);
+        if (invalidMatch) {
+          const invalidSymbols = (invalidMatch[1].match(/'([^']+)'/g) ?? []).map((s) => s.replace(/'/g, ""));
+          if (invalidSymbols.length > 0) {
+            console.warn(
+              "[liveFeedService] Stripping %d invalid symbol(s) from subscription list to prevent reconnect loop: %s",
+              invalidSymbols.length,
+              invalidSymbols.join(", ")
+            );
+            subscriptions.remove(invalidSymbols);
+          }
+        }
+      }
+
       connecting = false;
       isConnectedFlag = false;
       child = null;
@@ -732,7 +765,13 @@ export function subscribeSymbols(
 ): { added: string[]; evicted: string[]; rejected: string[] } {
   if (symbols.length === 0) return { added: [], evicted: [], rejected: [] };
 
-  const { added, evicted, rejected } = subscriptions.add(symbols, options);
+  // Normalise every symbol to the Fyers exchange-prefixed format before it
+  // touches the subscription manager.  Bare tickers (e.g. "RELIANCE") become
+  // "NSE:RELIANCE-EQ".  Already-formatted symbols (e.g. "NSE:NIFTY50-INDEX",
+  // option contracts) are passed through unchanged.
+  const normalised = symbols.map(toFyersSymbol);
+
+  const { added, evicted, rejected } = subscriptions.add(normalised, options);
 
   if (evicted.length > 0) {
     console.log(`[liveFeedService] Evicting ${evicted.length} oldest unprotected symbol(s) to stay under the 200 cap`);
