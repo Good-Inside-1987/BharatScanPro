@@ -13,7 +13,7 @@ import {
   apiListPaperAccounts, apiCreatePaperAccount, apiUpdatePaperAccount,
   apiDeletePaperAccount, apiResetPaperAccount,
   apiListPaperPositions, apiOpenPaperPosition, apiClosePaperPosition,
-  apiListPaperTrades, apiGetPaperQuotes,
+  apiListPaperTrades, apiGetPaperQuotes, apiGetSchedulerStatus,
   type ApiPaperAccount, type ApiPaperPosition, type ApiPaperTrade,
   type InstrumentType, type PositionSide, type OptionType,
 } from "@/lib/api";
@@ -386,6 +386,17 @@ export default function PaperTrading() {
   const returnPct = account && account.starting_balance > 0
     ? ((totalEquity - account.starting_balance) / account.starting_balance) * 100
     : 0;
+
+  // ── Live feed / market-hours status ─────────────────────────────────────
+  const { data: schedulerStatus } = useQuery({
+    queryKey: ["paper-scheduler-status"],
+    queryFn: apiGetSchedulerStatus,
+    refetchInterval: 60_000,
+    retry: false,
+  });
+  const liveFeedActive = !!(
+    schedulerStatus?.liveFeed.marketOpenNow && schedulerStatus?.liveFeed.connected
+  );
 
   const createAccountMut = useMutation({
     mutationFn: apiCreatePaperAccount,
@@ -840,6 +851,7 @@ export default function PaperTrading() {
           lotSizes={csvLotSizes}
           pending={openPositionMut.isPending}
           onSubmit={(body) => openPositionMut.mutate(body)}
+          liveFeedActive={liveFeedActive}
         />
       )}
       {showFuturesTrade && account && (
@@ -853,6 +865,7 @@ export default function PaperTrading() {
           optionsData={optionsData}
           pending={openPositionMut.isPending}
           onSubmit={(body) => openPositionMut.mutate(body)}
+          liveFeedActive={liveFeedActive}
         />
       )}
       {showOptionsTrade && account && (
@@ -985,7 +998,7 @@ function SpinnerInput({ label, sublabel, value, onChange, step = 0.05, min = 0, 
 }
 
 function NewTradeModal({
-  onClose, stockSymbols, underlyingSymbols, optionsData, histories, asOfDate, asOfOptionsDate, cashBalance, lotSizes: csvLotSizes, onSubmit, pending, forcedMode,
+  onClose, stockSymbols, underlyingSymbols, optionsData, histories, asOfDate, asOfOptionsDate, cashBalance, lotSizes: csvLotSizes, onSubmit, pending, forcedMode, liveFeedActive,
 }: {
   onClose: () => void;
   stockSymbols: string[];
@@ -999,6 +1012,7 @@ function NewTradeModal({
   onSubmit: (body: Parameters<typeof apiOpenPaperPosition>[1]) => void;
   pending: boolean;
   forcedMode?: "stock" | "options";
+  liveFeedActive: boolean;
 }) {
   const [instrumentType, setInstrumentType] = useState<InstrumentType>(forcedMode === "options" ? "option" : "stock");
   const [side, setSide] = useState<PositionSide>("long");
@@ -1111,7 +1125,7 @@ function NewTradeModal({
     const hasSymbol = instrumentType === "stock" ? !!symbol : (!!underlying && !!expiry && strike !== null);
     const hasQty = Number(qty) > 0;
     const hasPrice = priceTab === "market" ? true : Number(effectivePrice) > 0;
-    return hasSymbol && hasQty && hasPrice && !insufficientFunds;
+    return hasSymbol && hasQty && hasPrice && !insufficientFunds && liveFeedActive;
   })();
 
   useEffect(() => {
@@ -1186,10 +1200,17 @@ function NewTradeModal({
             <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">{instrumentLabel}</div>
             {autoPrice !== null ? (
               <div className="flex items-baseline gap-2">
+                {/* Green pulsing dot — only when broker is live and market is open */}
+                {liveQuote !== null && liveFeedActive && (
+                  <span className="relative flex h-2 w-2 self-center mr-0.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                  </span>
+                )}
                 <span className="text-2xl font-bold text-foreground">{autoPrice.toFixed(2)}</span>
                 {priceDiff !== null && (
-                  <span className="text-xs font-semibold text-emerald-400">
-                    +{priceDiff.toFixed(2)} (+{priceDiffPct!.toFixed(2)}%) ↗
+                  <span className={`text-xs font-semibold ${priceDiff >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {priceDiff >= 0 ? "+" : ""}{priceDiff.toFixed(2)} ({priceDiff >= 0 ? "+" : ""}{priceDiffPct!.toFixed(2)}%) {priceDiff >= 0 ? "↗" : "↘"}
                   </span>
                 )}
               </div>
@@ -1434,13 +1455,18 @@ function NewTradeModal({
             >
               Cancel
             </button>
-            <button
-              disabled={!canSubmit || pending}
-              onClick={submit}
-              className={`px-7 py-2.5 text-sm font-bold rounded-lg transition disabled:opacity-40 active:scale-95 ${side === "long" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}
-            >
-              {pending ? "Placing…" : side === "long" ? "Buy" : "Sell"}
-            </button>
+            <div className="flex flex-col items-end gap-1">
+              {!liveFeedActive && (
+                <span className="text-[10px] text-amber-400/80">Market closed or broker not connected</span>
+              )}
+              <button
+                disabled={!canSubmit || pending}
+                onClick={submit}
+                className={`px-7 py-2.5 text-sm font-bold rounded-lg transition disabled:opacity-40 active:scale-95 ${side === "long" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}
+              >
+                {pending ? "Placing…" : side === "long" ? "Buy" : "Sell"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1452,7 +1478,7 @@ function NewTradeModal({
 // ─── Trade In Futures Modal ───────────────────────────────────────────────────
 
 function TradeInFuturesModal({
-  onClose, underlyingSymbols, histories, asOfDate, cashBalance, lotSizes: csvLotSizes, optionsData, onSubmit, pending,
+  onClose, underlyingSymbols, histories, asOfDate, cashBalance, lotSizes: csvLotSizes, optionsData, onSubmit, pending, liveFeedActive,
 }: {
   onClose: () => void;
   underlyingSymbols: string[];
@@ -1463,6 +1489,7 @@ function TradeInFuturesModal({
   optionsData: ReturnType<typeof useData>["optionsData"];
   onSubmit: (body: Parameters<typeof apiOpenPaperPosition>[1]) => void;
   pending: boolean;
+  liveFeedActive: boolean;
 }) {
   const [side, setSide] = useState<PositionSide>("long");
   const [underlying, setUnderlying] = useState("");
@@ -1550,7 +1577,7 @@ function TradeInFuturesModal({
   const priceDiffPct = autoPrice !== null && prevClosePrice !== null ? (priceDiff! / prevClosePrice) * 100 : null;
 
   const canSubmit = !!underlying && !!expiry && Number(qty) > 0 && !insufficientFunds &&
-    (priceTab === "market" || Number(effectivePrice) > 0);
+    (priceTab === "market" || Number(effectivePrice) > 0) && liveFeedActive;
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -1798,13 +1825,18 @@ function TradeInFuturesModal({
               className="px-4 py-2.5 text-sm font-semibold rounded-lg border border-border/60 text-muted-foreground hover:text-foreground hover:border-border transition">
               Cancel
             </button>
-            <button
-              disabled={!canSubmit || pending}
-              onClick={submit}
-              className={`px-7 py-2.5 text-sm font-bold rounded-lg transition disabled:opacity-40 active:scale-95 ${side === "long" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}
-            >
-              {pending ? "Placing…" : side === "long" ? "Buy" : "Sell"}
-            </button>
+            <div className="flex flex-col items-end gap-1">
+              {!liveFeedActive && (
+                <span className="text-[10px] text-amber-400/80">Market closed or broker not connected</span>
+              )}
+              <button
+                disabled={!canSubmit || pending}
+                onClick={submit}
+                className={`px-7 py-2.5 text-sm font-bold rounded-lg transition disabled:opacity-40 active:scale-95 ${side === "long" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}
+              >
+                {pending ? "Placing…" : side === "long" ? "Buy" : "Sell"}
+              </button>
+            </div>
           </div>
         </div>
       </div>

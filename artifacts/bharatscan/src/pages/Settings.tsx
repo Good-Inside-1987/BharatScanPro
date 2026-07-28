@@ -1042,17 +1042,17 @@ export default function Settings() {
                         <span className="block text-[9px] uppercase tracking-wide text-muted-foreground/50">
                           Storage
                         </span>
-                        <div className="grid grid-cols-3 gap-2 text-[10px]">
+                        <div className="grid grid-cols-2 gap-2 text-[10px]">
                           {[
-                            { label: "app.db", size: marketStatus.databases.app_db_mb },
-                            { label: "market.db", size: marketStatus.databases.market_db_mb },
-                            { label: "live.db", size: marketStatus.databases.live_db_mb },
-                          ].map(({ label, size }) => (
+                            { label: "app.db", size: marketStatus.databases.app_db_mb, note: "Accounts & settings" },
+                            { label: "market.db", size: marketStatus.databases.market_db_mb, note: "OHLCV · intraday · symbols" },
+                          ].map(({ label, size, note }) => (
                             <div key={label} className="rounded-md border border-border bg-muted/20 px-2.5 py-2 text-center">
                               <p className="text-sm font-bold text-foreground leading-none font-mono">
                                 {size} <span className="text-[9px] font-normal text-muted-foreground">MB</span>
                               </p>
                               <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">{label}</p>
+                              <p className="text-[9px] text-muted-foreground/50 mt-0.5">{note}</p>
                             </div>
                           ))}
                         </div>

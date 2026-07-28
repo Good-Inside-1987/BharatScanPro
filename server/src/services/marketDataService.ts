@@ -810,34 +810,20 @@ export async function getLiveQuotes(symbols: string[]): Promise<Quote[]> {
   else quoteStats.requestsFullyCached++;
 
   // ── 2. Fall back to a single REST call for only the missing symbols ───────
+  // resolvedMissing is declared here so it's in scope for the merge step below.
   let restQuotes: Quote[] = [];
+  let resolvedMissing: string[] = missing; // may stay equal when all are already prefixed
   if (missing.length > 0) {
     const adapter = await getAuthenticatedAdapter();
     if (!adapter) {
       // No cached data and no adapter available — nothing we can serve.
       if (cacheHits.size === 0) throw noAdapterReason();
     } else {
-      try {
-        quoteStats.restCallsMade++;
-        restQuotes = await adapter.getQuotes(missing);
-      } catch (err) {
-        if (
-          err instanceof AuthenticationError ||
-          err instanceof SessionExpiredError ||
-          err instanceof RateLimitError ||
-          err instanceof BrokerUnavailableError
-        ) throw err;
-        classifyAdapterError(err);
-      }
-
-      // Subscribe these symbols so future requests are served from the live
-      // cache instead of REST (respects the 200-symbol cap/rotation).
       // Resolve any bare tickers (e.g. "RELIANCE") to their correct Fyers
       // symbol (e.g. "NSE:RELIANCE-EQ" or "NSE:AAKAAR-SM") using the
       // fyers_symbol column populated by symbolMasterService.  Already-
       // prefixed symbols (containing ":") are passed through unchanged.
       const bareTickerMissing = missing.filter((s) => !s.includes(":"));
-      let resolvedMissing = missing;
       if (bareTickerMissing.length > 0) {
         const placeholders = bareTickerMissing.map(() => "?").join(",");
         const rows = marketDb
@@ -850,12 +836,44 @@ export async function getLiveQuotes(symbols: string[]): Promise<Quote[]> {
           s.includes(":") ? s : fyersMap.get(s) ?? `NSE:${s}-EQ`
         );
       }
+
+      try {
+        quoteStats.restCallsMade++;
+        // Use the resolved (Fyers-formatted) symbols so the broker can look
+        // them up. Bare tickers like "CHAMBLFERT" are rejected by Fyers REST.
+        restQuotes = await adapter.getQuotes(resolvedMissing);
+      } catch (err) {
+        if (
+          err instanceof AuthenticationError ||
+          err instanceof SessionExpiredError ||
+          err instanceof RateLimitError ||
+          err instanceof BrokerUnavailableError
+        ) throw err;
+        classifyAdapterError(err);
+      }
+
+      // Subscribe so future requests hit the WebSocket cache instead of REST.
       subscribeSymbols(resolvedMissing);
     }
   }
 
   // ── 3. Merge cache hits + REST fallback, preserving requested order ───────
-  const restBySymbol = new Map(restQuotes.map((q) => [q.symbol, q]));
+  // restBySymbol is keyed by the broker's canonical Fyers symbol.
+  // Also index by the *original* requested key so bare-ticker callers
+  // (e.g. "CHAMBLFERT") can find the quote returned as "NSE:CHAMBLFERT-EQ".
+  const restBySymbol = new Map<string, Quote>();
+  for (const q of restQuotes) {
+    restBySymbol.set(q.symbol, q);
+  }
+  for (let i = 0; i < missing.length; i++) {
+    const orig = missing[i];
+    const resolved = resolvedMissing[i];
+    if (orig !== resolved) {
+      const q = restBySymbol.get(resolved);
+      if (q && !restBySymbol.has(orig)) restBySymbol.set(orig, q);
+    }
+  }
+
   const result: Quote[] = [];
   for (const symbol of symbols) {
     const quote = cacheHits.get(symbol) ?? restBySymbol.get(symbol);
