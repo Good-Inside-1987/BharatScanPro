@@ -1,0 +1,65 @@
+market is live and my broker is connected to electron, but why it is not saving live per minute data in database file, and in Paper trading page, why it is not showing the live data, so that I can take paper trade, in Paper trading page, the Buy and Sell button for trade execution should active only market hours and when broker is connected and app is getting live data. and in Paper trading page, when I select any stock, the price reflect on the top, in market hours and when broker is connect and getting live feed the green dot should also appear before the selected stock price.
+
+
+Good context. Now let me read the key files in parallel to understand all four issues.
+
+14 actions
+Let me gather the remaining context I need in one pass.
+
+11 actions
+I have a clear picture of all four issues. Let me read the exact sections I need to edit.
+
+4 actions
+Now I have everything I need. Let me read the order dialog component props and a few more lines to confirm the exact edit targets.
+
+5 actions
+Let me read the TradeInFuturesModal buy button and the second order dialog to understand them fully before making all edits.
+
+3 actions
+I have all the context. Now I'll implement all fixes in parallel — four issues, three files.
+Root causes found:
+1. live.db = 0 MB — intraday data correctly writes to market.db's ohlcv_intraday table; live.db is an unused legacy file. The storage widget is misleading.
+2. No live price in paper trading — getLiveQuotes resolves bare tickers to Fyers symbols for subscribing, but still passes bare tickers to adapter.getQuotes() — then can't match the broker's NSE:CHAMBLFERT-EQ response back to the requested "CHAMBLFERT" key.
+3. Buy/Sell not gated — canSubmit has no market-hours or broker-connected check.
+4. No green dot — price display in the order dialog has no live indicator.
+
+2 actions
+That merge logic I wrote is needlessly convoluted. Let me clean it up into a simple, readable fix.
+
+2 actions
+Let me verify the marketDataService edit is clean and continue with the PaperTrading.tsx changes in parallel.
+
+3 actions
+There's a scoping bug — resolvedMissing is declared inside the if block but referenced in the merge step outside it. Let me fix that, then do the PaperTrading and Settings changes all in parallel.
+
+2 actions
+Now let me do the PaperTrading.tsx and Settings.tsx changes simultaneously.
+
+6 actions
+Let me read the remaining sections I need to edit in parallel.
+
+3 actions
+Now I have everything. Let me implement all remaining changes in parallel — PaperTrading.tsx (import, live status query, modal props, green dot, gate buttons) and Settings.tsx (fix live.db display).
+
+4 actions
+Now let me pass liveFeedActive to the modal call sites and update both modal components — all in parallel.
+
+6 actions
+Now let me update both modal component definitions, gate their buttons, and add the green dot — all in parallel.
+
+8 actions
+Now I'll make all remaining edits in parallel — gate both modal buttons, add green dot, fix Settings display.
+
+11 actions
+Continuing — finish the Futures modal button and fix the Settings display simultaneously.
+
+2 actions
+Now fix the Settings.tsx live.db display, then restart both workflows.
+
+7 actions
+Both workflows are running cleanly. Here's a summary of everything that was fixed:
+
+1. Live data not saving (live.db = 0 MB) This was a display confusion, not a real data loss. Intraday candles from the live feed have always written to market.db's ohlcv_intraday table — live.db is an unused leftover file. The storage widget in Settings now shows only app.db and market.db with a note that market.db holds "OHLCV · intraday · symbols", so it's clear where live candle data lives.
+2. Paper trading not showing live prices Root cause: getLiveQuotes was resolving bare tickers like "CHAMBLFERT" to their correct Fyers symbol (NSE:CHAMBLFERT-EQ) for subscribing, but was still passing the bare ticker to the broker's REST quote call. Fyers can't find "CHAMBLFERT" — it needs "NSE:CHAMBLFERT-EQ". The broker's response was also keyed by the Fyers symbol, so even when it worked, the result couldn't be matched back to the original key. Both are now fixed: the broker call uses the resolved Fyers symbols, and the merge step aliases bare-ticker results back to the original keys.
+3. Buy/Sell gated on market hours + broker connection Both NewTradeModal (stocks) and TradeInFuturesModal (futures) now query the live feed schedule every 60 seconds. canSubmit requires marketOpenNow && connected — the button stays grayed out with an amber hint "Market closed or broker not connected" until both conditions are met.
+4. Green dot before live price A pulsing green dot (same style as the rest of the app) now appears to the left of the price in the stock order dialog when liveQuote !== null && liveFeedActive — meaning you're in market hours, the broker is connected, AND the price you're seeing is an actual live tick (not yesterday's close from bhavcopy).
