@@ -123,8 +123,12 @@ export const config = {
   // calendar day (IST). Stays well below Fyers' 10 req/sec burst
   // limit while bounding total daily API consumption.
   // Replit: conservative — free-tier broker accounts have low caps.
-  // Full: Oracle / local where broker tier and network are better.
-  backfillDailyRequestBudget: isReplit ? 500 : 4000,
+  // Full: 8000 covers one full EOD + intraday cycle for all ~2960 NSE
+  // symbols (≈5920 requests) with headroom for ad-hoc backfill.
+  // Override with BACKFILL_DAILY_REQUEST_BUDGET env var if needed.
+  backfillDailyRequestBudget: process.env.BACKFILL_DAILY_REQUEST_BUDGET
+    ? parseInt(process.env.BACKFILL_DAILY_REQUEST_BUDGET, 10)
+    : isReplit ? 500 : 8000,
 };
 
 export type AppConfig = typeof config;

@@ -3,6 +3,7 @@ import { db } from "../db.js";
 import { encrypt, decrypt } from "../lib/encryption.js";
 import { getAdapter } from "../adapters/index.js";
 import { registerAdapter, getServiceStats } from "../services/marketDataService.js";
+import { onBrokerFirstConnected } from "../services/catchUpScheduler.js";
 import {
   AuthenticationError,
   SessionExpiredError,
@@ -401,6 +402,10 @@ router.post("/:id/connect", async (req: Request, res: Response) => {
   }
 
   registerAdapter(row.id, adapter, now);
+
+  // Trigger startup catch-up retry for any jobs skipped at boot because no
+  // broker was connected yet (e.g. EOD/intraday sync).
+  onBrokerFirstConnected();
 
   // ── Post-login integration check ────────────────────────────────────────
   // Confirm the adapter cache was actually populated (not just that

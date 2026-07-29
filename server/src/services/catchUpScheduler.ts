@@ -44,6 +44,11 @@ import { addDays, isTradingDay, mostRecentTradingDay } from "./tradingCalendar.j
 
 const CHECK_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 
+// Set to true when startup catch-up exits with jobs still pending (skipped
+// because no broker was connected yet).  Cleared once the broker-connect
+// retry completes so it doesn't re-fire on every subsequent login.
+let startupSkippedNoBroker = false;
+
 // ── Job registry ──────────────────────────────────────────────────────────────
 // scheduleKey indexes into config.syncSchedule to know each job's normal
 // cron time, for the "has today's scheduled time already passed" check.
@@ -136,6 +141,7 @@ let catchUpInFlight = false;
 export async function runStartupCatchUp(): Promise<void> {
   if (catchUpInFlight) return;
   catchUpInFlight = true;
+  startupSkippedNoBroker = false;
   status.active = true;
   status.lastRunReason = "startup";
 
@@ -192,7 +198,11 @@ export async function runStartupCatchUp(): Promise<void> {
       console.log("[catchUpScheduler] Catching up %s for %s …", job.jobName, date);
 
       try {
-        await job.run(date);
+        const result = await job.run(date) as { skippedNoAdapter?: boolean } | undefined;
+        if (result?.skippedNoAdapter) {
+          // Broker wasn't connected — flag so onBrokerFirstConnected() can retry.
+          startupSkippedNoBroker = true;
+        }
       } catch (err) {
         console.error(
           "[catchUpScheduler] Catch-up run failed for %s @ %s: %s",
@@ -210,6 +220,24 @@ export async function runStartupCatchUp(): Promise<void> {
     status.currentDate = null;
     catchUpInFlight = false;
   }
+}
+
+/**
+ * Call this once after a broker successfully authenticates.  If the startup
+ * catch-up previously exited early because no broker was connected, this
+ * re-triggers it so EOD/intraday jobs that were skipped can now run.
+ * Safe to call multiple times — only acts when there is actually work to do.
+ */
+export function onBrokerFirstConnected(): void {
+  if (!startupSkippedNoBroker) return;
+  startupSkippedNoBroker = false; // clear immediately so concurrent logins don't double-fire
+  console.log("[catchUpScheduler] Broker just connected — re-running startup catch-up for previously-skipped jobs …");
+  void runStartupCatchUp().catch((err) => {
+    console.error(
+      "[catchUpScheduler] Broker-connect catch-up failed:",
+      err instanceof Error ? err.message : String(err)
+    );
+  });
 }
 
 // ── Trigger B: periodic same-day retry ───────────────────────────────────────
@@ -240,10 +268,11 @@ export async function runPeriodicCatchUpCheck(): Promise<void> {
     );
 
     for (const job of due) {
-      if (budgetExhausted()) {
-        console.warn("[catchUpScheduler] Daily request budget exhausted — pausing periodic retries");
-        break;
-      }
+      // No outer budget gate here — the sync jobs use an "already-covered"
+      // fast path (free, no broker calls) for symbols already in the DB.
+      // Budget exhaustion is handled per-symbol inside runSymbolLoop, so the
+      // job can still complete and log a sync_log "completed" row even when
+      // budget is zero (all symbols covered by the live feed or prior runs).
 
       status.jobName = job.jobName;
       status.currentDate = today;
