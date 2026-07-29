@@ -19,7 +19,7 @@
 import { marketDb } from "../db.js";
 import { config } from "../config/environment.js";
 import { getHistoricalBars, getAuthenticatedAdapter, getServiceStats } from "./marketDataService.js";
-import { AuthenticationError, SessionExpiredError, InvalidSymbolError } from "../errors/brokerErrors.js";
+import { AuthenticationError, SessionExpiredError, InvalidSymbolError, RateLimitError } from "../errors/brokerErrors.js";
 import { isTradingDay } from "./tradingCalendar.js";
 
 // ── Fyers symbol helper (same convention as dataLoader.ts's toFyersSymbol) ────
@@ -434,6 +434,17 @@ async function runSymbolLoop(
       if (err instanceof AuthenticationError || err instanceof SessionExpiredError) {
         console.error(
           "[syncJobs] Broker session unavailable mid-job (%s) — stopping cleanly",
+          err.message
+        );
+        break;
+      }
+      if (err instanceof RateLimitError) {
+        // Hard daily quota from Fyers ("request limit reached") — no point
+        // continuing; every subsequent request will get the same response and
+        // burn the app-level budget counter for nothing.
+        console.error(
+          "[syncJobs] Fyers daily API quota exhausted mid-job — stopping cleanly. " +
+          "Remaining symbols will be retried in the next session. Error: %s",
           err.message
         );
         break;

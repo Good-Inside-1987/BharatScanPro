@@ -186,6 +186,13 @@ export function classifyAdapterError(err: unknown): never {
     throw new RateLimitError(message, 60_000, details);
   }
 
+  // Fyers' JSON-level hard daily quota response — same pattern handled in
+  // optionsDataService.  Retry-after is 24 h (next IST day); callers that
+  // catch RateLimitError should stop their job loop instead of hammering.
+  if (/request limit reached/i.test(message)) {
+    throw new RateLimitError(message, 24 * 60 * 60_000, details);
+  }
+
   if (/not configured|session|expired|unauthori[sz]|invalid.?(token|key|credentials)|please provide valid|forbidden|could not authenticate/i.test(message)) {
     markSessionExpired();
     throw new SessionExpiredError(message, details);
