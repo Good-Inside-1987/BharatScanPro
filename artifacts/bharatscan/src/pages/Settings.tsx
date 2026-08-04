@@ -146,11 +146,18 @@ const BROKER_STATUS_META: Record<BrokerStatus, { label: string; dotCls: string; 
 };
 
 async function brokerFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = (() => {
+    try { return localStorage.getItem("bs_auth_token"); } catch { return null; }
+  })();
+  const authHeader: Record<string, string> = token ? { "Authorization": `Bearer ${token}` } : {};
   const res = await fetch(path, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers: { "Content-Type": "application/json", ...authHeader, ...(init?.headers ?? {}) },
     credentials: "include",
   });
+  if (res.status === 401) {
+    window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+  }
   const json = await res.json();
   if (!res.ok) throw new Error((json as { error?: string }).error ?? `HTTP ${res.status}`);
   return json as T;

@@ -78,6 +78,15 @@ interface DataContextValue {
 
 const DataContext = createContext<DataContextValue | null>(null);
 
+/** Attaches the stored Bearer token to any plain fetch() call. */
+function authedFetch(path: string): Promise<Response> {
+  const token = (() => {
+    try { return localStorage.getItem("bs_auth_token"); } catch { return null; }
+  })();
+  const authHeader: Record<string, string> = token ? { "Authorization": `Bearer ${token}` } : {};
+  return fetch(path, { headers: authHeader, credentials: "include" });
+}
+
 export function DataContextProvider({ children }: { children: ReactNode }) {
   const [histories, setHistories] = useState<SymbolHistory[]>([]);
   const [loadedFileNames, setLoadedFileNames] = useState<string[]>([]);
@@ -293,7 +302,7 @@ export function DataContextProvider({ children }: { children: ReactNode }) {
   async function handleLoadFromDatabase() {
     setDbLoading(true);
     try {
-      const res = await fetch("/api/market-data/scanner/universe-data");
+      const res = await authedFetch("/api/market-data/scanner/universe-data");
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       const json = await res.json() as { symbols: number; bars: number; data: SymbolHistory[] };
       if (!json.data?.length) {
@@ -357,7 +366,7 @@ export function DataContextProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         toastId = toast.loading("Loading cached market data…", { duration: Infinity });
-        const res = await fetch("/api/market-data/scanner/universe-data");
+        const res = await authedFetch("/api/market-data/scanner/universe-data");
         if (!res.ok) { toast.dismiss(toastId); return; }
         const json = await res.json() as { symbols: number; bars: number; data: SymbolHistory[] };
         toast.dismiss(toastId);
@@ -382,7 +391,7 @@ export function DataContextProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         toastId = toast.loading("Loading cached options data…", { duration: Infinity });
-        const res = await fetch("/api/market-data/scanner/options-universe-data");
+        const res = await authedFetch("/api/market-data/scanner/options-universe-data");
         if (!res.ok) { toast.dismiss(toastId); return; }
         const json = await res.json() as { symbols: number; bars: number; data: ApiOptionRow[] };
         toast.dismiss(toastId);
