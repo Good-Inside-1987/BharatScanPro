@@ -185,7 +185,11 @@ export class FyersAdapter implements BrokerAdapter {
         body && typeof body === "object" && "message" in body
           ? String((body as { message?: unknown }).message ?? "")
           : undefined;
-      throw new FyersApiError({ ...baseDetails, brokerMessage });
+      const bodyPreview = typeof body === "string" ? body : JSON.stringify(body ?? {});
+      throw new FyersApiError(
+        { ...baseDetails, brokerMessage },
+        `Fyers ${context.operation ?? "REST"} request failed (HTTP ${response.status}): ${brokerMessage || bodyPreview}`
+      );
     }
 
     try {

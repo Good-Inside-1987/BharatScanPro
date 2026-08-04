@@ -1,0 +1,69 @@
+Prompt 29 — Fix: FyersApiError swallows the real HTTP status/response body
+on non-OK responses, and the resulting generic message gets misclassified
+as a transient/retryable error even when it isn't.
+
+Root cause, in server/src/adapters/fyers.ts's private fetchJson():
+
+  if (!response.ok) {
+    const brokerMessage =
+      body && typeof body === "object" && "message" in body
+        ? String((body as { message?: unknown }).message ?? "")
+        : undefined;
+    throw new FyersApiError({ ...baseDetails, brokerMessage });
+  }
+
+When Fyers returns a non-200 response whose JSON body has no `.message`
+field, brokerMessage is undefined, and FyersApiError's constructor falls
+back to the hardcoded default text "Fyers REST request failed" — discarding
+the actual HTTP status and response body from the log/thrown message.
+
+That fallback string is a substring-match target in
+server/src/services/syncJobs.ts's TRANSIENT_OVERLOAD_PATTERNS
+(/fyers rest request failed/i), which was written assuming this message
+only ever comes from a genuine fetch()-level network rejection (per the
+comment above it) — but it can ALSO come from this !response.ok branch,
+which may be a permanent, non-retryable failure (e.g. invalid/delisted
+symbol, bad request). Both cases currently look identical in the logs and
+both get retried as if transient, burning retry attempts and budget on
+errors that will never succeed.
+
+Fix part 1 — fyers.ts: always include the real HTTP status and a preview
+of the response body in the thrown message on the !response.ok branch, so
+nothing is masked:
+
+  if (!response.ok) {
+    const brokerMessage =
+      body && typeof body === "object" && "message" in body
+        ? String((body as { message?: unknown }).message ?? "")
+        : undefined;
+    const bodyPreview = typeof body === "string" ? body : JSON.stringify(body ?? {});
+    throw new FyersApiError(
+      { ...baseDetails, brokerMessage },
+      `Fyers ${context.operation ?? "REST"} request failed (HTTP ${response.status}): ${brokerMessage || bodyPreview}`
+    );
+  }
+
+Fix part 2 — syncJobs.ts: narrow the transient-overload regex so it no
+longer matches this HTTP-status branch's output. Replace the existing
+pattern:
+
+  /fyers rest request failed/i,
+
+with a pattern that only matches the genuine fetch()-level network
+rejection wording from fyers.ts's catch block (`Fyers ${operation} request
+failed: ${message}` where message comes from a caught network exception,
+not an HTTP status), e.g.:
+
+  /fyers \w+ request failed: (?!.*HTTP \d)/i,
+
+Also update the comment above TRANSIENT_OVERLOAD_PATTERNS to note that
+after this fix, HTTP-status failures carry "(HTTP <code>)" in the message
+and are deliberately excluded from the transient-retry pattern, since they
+represent a real response from Fyers (not a network hiccup) and may be
+permanent (bad symbol, bad request) rather than transient.
+
+Test: after this fix, re-run EOD sync and check the log line for ABNINT/BDR
+(or whichever symbols fail) — it should now show the real HTTP status code
+and Fyers' actual response body instead of the generic "Fyers REST request
+failed" text, so we can tell definitively whether it's a bad symbol, an
+auth issue, or something else.

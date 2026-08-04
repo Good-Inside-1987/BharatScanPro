@@ -335,9 +335,15 @@ function collectSample(
 // a real SessionExpiredError, which this loop already handles correctly by
 // stopping the whole job cleanly instead of burning retries/budget hammering
 // a dead token across thousands of symbols.
+// NOTE: the second pattern deliberately excludes messages that contain
+// "(HTTP <code>)" — those come from the !response.ok branch in fyers.ts and
+// represent a real response from Fyers (bad symbol, bad request, etc.) that
+// is permanent rather than transient. Only the genuine fetch()-level network
+// rejection wording (`Fyers <op> request failed: <network error>`, no HTTP
+// status appended) is matched here.
 const TRANSIENT_OVERLOAD_PATTERNS = [
   /rate limited by fyers/i,
-  /fyers rest request failed/i,
+  /fyers \w+ request failed: (?!.*HTTP \d)/i,
 ];
 
 function isTransientOverloadError(err: unknown): boolean {
