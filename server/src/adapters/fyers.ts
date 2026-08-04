@@ -285,6 +285,12 @@ export class FyersAdapter implements BrokerAdapter {
         },
       });
 
+      if (data.s === "no_data") {
+        // Valid symbol, no candles for this range — not an error, just
+        // nothing to report. Treat identically to "ok" with an empty array.
+        continue;
+      }
+
       if (data.s !== "ok") {
         throw new FyersApiError(
           {
