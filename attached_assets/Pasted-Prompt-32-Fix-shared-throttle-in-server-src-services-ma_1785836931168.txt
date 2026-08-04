@@ -1,0 +1,62 @@
+Prompt 32 — Fix: shared throttle() in server/src/services/marketDataService.ts
+only enforces a per-second pacing floor (125ms, ~8 req/sec), with no
+per-minute cap — allowing sustained bulk loops to exceed Fyers' documented
+200 requests/minute limit even though they stay safely under the 10/sec
+limit. This is very likely the real cause of the "request limit reached"
+429s seen early and repeatedly during EOD/options sync, which are
+currently misclassified as a full daily-quota exhaustion (24h stop) in
+classifyAdapterError() when they're actually a per-minute violation that
+would clear itself within a minute.
+
+Fix — add a sliding-window per-minute cap alongside the existing
+per-second throttle, in the same "Rate-limit pacing" section:
+
+const MAX_RPS = 8;
+const MIN_INTERVAL_MS = Math.ceil(1000 / MAX_RPS);
+const MAX_RPM = 180;                         // Fyers cap = 200; stay 10% under
+const RPM_WINDOW_MS = 60_000;
+
+let lastCallAt = 0;
+let callTimestamps: number[] = [];           // sliding 60s window
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function throttle<T>(fn: () => Promise<T>): Promise<T> {
+  // Per-second floor (existing behaviour)
+  const secWait = MIN_INTERVAL_MS - (Date.now() - lastCallAt);
+  if (secWait > 0) await sleep(secWait);
+
+  // Per-minute sliding-window cap (new)
+  const now = Date.now();
+  callTimestamps = callTimestamps.filter((t) => now - t < RPM_WINDOW_MS);
+  if (callTimestamps.length >= MAX_RPM) {
+    const oldestInWindow = callTimestamps[0];
+    const minuteWait = RPM_WINDOW_MS - (now - oldestInWindow) + 50; // small margin
+    if (minuteWait > 0) {
+      console.log(
+        "[marketDataService] Per-minute pacing cap reached (%d/%d) — waiting %dms",
+        callTimestamps.length, MAX_RPM, minuteWait
+      );
+      await sleep(minuteWait);
+    }
+  }
+
+  lastCallAt = Date.now();
+  callTimestamps.push(lastCallAt);
+  return fn();
+}
+
+No other call sites need to change — throttleCall() and throttle() keep
+the same signature, so every existing caller (EOD/intraday sync,
+optionsDataService, inline history fetches, quotes) automatically gets
+the per-minute protection for free.
+
+Test: re-run a bulk EOD sync and watch for the new
+"[marketDataService] Per-minute pacing cap reached" log line appearing
+BEFORE any "request limit reached" 429s — that confirms the app is now
+self-throttling ahead of Fyers' limit instead of running into it. Ideally
+you should see the sync take somewhat longer per batch of ~180 symbols,
+but with sharply fewer (ideally zero) 429/"quota exhausted" stops during
+a single session.

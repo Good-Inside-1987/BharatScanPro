@@ -104,17 +104,38 @@ function computeGaps(covered: DateRange[], from: string, to: string): DateRange[
 
 const MAX_RPS = 8;                                    // Fyers cap = 10; stay 20 % under
 const MIN_INTERVAL_MS = Math.ceil(1000 / MAX_RPS);   // 125 ms between calls
+const MAX_RPM = 180;                                  // Fyers cap = 200; stay 10% under
+const RPM_WINDOW_MS = 60_000;
 
 let lastCallAt = 0;
+let callTimestamps: number[] = [];                    // sliding 60 s window
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
 async function throttle<T>(fn: () => Promise<T>): Promise<T> {
-  const wait = MIN_INTERVAL_MS - (Date.now() - lastCallAt);
-  if (wait > 0) await sleep(wait);
+  // Per-second floor (existing behaviour)
+  const secWait = MIN_INTERVAL_MS - (Date.now() - lastCallAt);
+  if (secWait > 0) await sleep(secWait);
+
+  // Per-minute sliding-window cap (new)
+  const now = Date.now();
+  callTimestamps = callTimestamps.filter((t) => now - t < RPM_WINDOW_MS);
+  if (callTimestamps.length >= MAX_RPM) {
+    const oldestInWindow = callTimestamps[0];
+    const minuteWait = RPM_WINDOW_MS - (now - oldestInWindow) + 50; // small margin
+    if (minuteWait > 0) {
+      console.log(
+        "[marketDataService] Per-minute pacing cap reached (%d/%d) — waiting %dms",
+        callTimestamps.length, MAX_RPM, minuteWait
+      );
+      await sleep(minuteWait);
+    }
+  }
+
   lastCallAt = Date.now();
+  callTimestamps.push(lastCallAt);
   return fn();
 }
 
