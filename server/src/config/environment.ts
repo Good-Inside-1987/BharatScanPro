@@ -123,12 +123,17 @@ export const config = {
   // calendar day (IST). Stays well below Fyers' 10 req/sec burst
   // limit while bounding total daily API consumption.
   // Replit: conservative — free-tier broker accounts have low caps.
-  // Full: 8000 covers one full EOD + intraday cycle for all ~2960 NSE
-  // symbols (≈5920 requests) with headroom for ad-hoc backfill.
+  // Full: 20000 covers one full EOD + intraday cycle for all ~2960 NSE
+  // symbols (≈5920 requests) with headroom for options sync, live-feed
+  // quote polling, and multi-day catch-up backlog processing — raised
+  // from the original 8000 after confirming Fyers' real per-account
+  // daily cap is far higher (100,000/day per their v3 docs), and after
+  // fixing the per-minute pacing gap that was the actual cause of
+  // premature "request limit reached" 429s (see Prompt 32).
   // Override with BACKFILL_DAILY_REQUEST_BUDGET env var if needed.
   backfillDailyRequestBudget: process.env.BACKFILL_DAILY_REQUEST_BUDGET
     ? parseInt(process.env.BACKFILL_DAILY_REQUEST_BUDGET, 10)
-    : isReplit ? 500 : 8000,
+    : isReplit ? 500 : 20000,
 };
 
 export type AppConfig = typeof config;
