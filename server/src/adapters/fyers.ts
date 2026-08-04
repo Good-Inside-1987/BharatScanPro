@@ -235,14 +235,17 @@ export class FyersAdapter implements BrokerAdapter {
     }, { operation: "login" });
 
     if (data.s !== "ok" || !data.access_token) {
-      throw new FyersApiError({
-        provider: "fyers",
-        operation: "login",
-        httpStatus: 200,
-        brokerStatus: data.s,
-        brokerMessage: data.message,
-        responseBody: sanitizeResponseBody(data),
-      });
+      throw new FyersApiError(
+        {
+          provider: "fyers",
+          operation: "login",
+          httpStatus: 200,
+          brokerStatus: data.s,
+          brokerMessage: data.message,
+          responseBody: sanitizeResponseBody(data),
+        },
+        `Fyers login rejected (status: ${data.s}): ${data.message || JSON.stringify(sanitizeResponseBody(data))}`
+      );
     }
 
     return data.access_token;
@@ -283,20 +286,23 @@ export class FyersAdapter implements BrokerAdapter {
       });
 
       if (data.s !== "ok") {
-        throw new FyersApiError({
-          provider: "fyers",
-          operation: "history",
-          httpStatus: 200,
-          brokerStatus: data.s,
-          brokerMessage: data.message,
-          request: {
-            symbol,
-            resolution,
-            rangeFrom: chunk.from,
-            rangeTo: chunk.to,
+        throw new FyersApiError(
+          {
+            provider: "fyers",
+            operation: "history",
+            httpStatus: 200,
+            brokerStatus: data.s,
+            brokerMessage: data.message,
+            request: {
+              symbol,
+              resolution,
+              rangeFrom: chunk.from,
+              rangeTo: chunk.to,
+            },
+            responseBody: sanitizeResponseBody(data),
           },
-          responseBody: sanitizeResponseBody(data),
-        });
+          `Fyers history rejected for ${symbol} (status: ${data.s}): ${data.message || JSON.stringify(sanitizeResponseBody(data))}`
+        );
       }
 
       for (const candle of data.candles ?? []) {
@@ -346,15 +352,18 @@ export class FyersAdapter implements BrokerAdapter {
     });
 
     if (data.s !== "ok") {
-      throw new FyersApiError({
-        provider: "fyers",
-        operation: "quotes",
-        httpStatus: 200,
-        brokerStatus: data.s,
-        brokerMessage: data.message,
-        request: { symbols },
-        responseBody: sanitizeResponseBody(data),
-      });
+      throw new FyersApiError(
+        {
+          provider: "fyers",
+          operation: "quotes",
+          httpStatus: 200,
+          brokerStatus: data.s,
+          brokerMessage: data.message,
+          request: { symbols },
+          responseBody: sanitizeResponseBody(data),
+        },
+        `Fyers quotes rejected (status: ${data.s}): ${data.message || JSON.stringify(sanitizeResponseBody(data))}`
+      );
     }
 
     return (data.d ?? []).map((entry) => ({
@@ -404,15 +413,18 @@ export class FyersAdapter implements BrokerAdapter {
     });
 
     if (data.s !== "ok") {
-      throw new FyersApiError({
-        provider: "fyers",
-        operation: "options-chain",
-        httpStatus: 200,
-        brokerStatus: data.s,
-        brokerMessage: data.message,
-        request: { underlying, expiry },
-        responseBody: sanitizeResponseBody(data),
-      });
+      throw new FyersApiError(
+        {
+          provider: "fyers",
+          operation: "options-chain",
+          httpStatus: 200,
+          brokerStatus: data.s,
+          brokerMessage: data.message,
+          request: { underlying, expiry },
+          responseBody: sanitizeResponseBody(data),
+        },
+        `Fyers options-chain rejected for ${underlying} (status: ${data.s}): ${data.message || JSON.stringify(sanitizeResponseBody(data))}`
+      );
     }
 
     // Extract available expiry dates from the response meta
