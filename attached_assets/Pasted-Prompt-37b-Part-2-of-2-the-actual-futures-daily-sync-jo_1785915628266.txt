@@ -1,0 +1,156 @@
+Prompt 37b — Part 2 of 2: the actual futures daily-sync job and API
+endpoint, using the futures_symbols table populated in Prompt 37a.
+
+── Part A: new file server/src/services/futuresDataService.ts ──────────
+
+Model this closely on optionsDataService.ts's nightly sync structure —
+import the same helpers it uses: getAuthenticatedAdapter, throttleCall,
+checkAndConsumeBudget, classifyAdapterError, AuthenticationError,
+SessionExpiredError, getServiceStats, isTradingDay, marketDb, and any
+sync-log helpers (startSyncLog/finishSyncLog) that optionsDataService.ts
+uses — check its imports at the top of that file and mirror them.
+
+import { marketDb } from "../db/market-db.js"; // match actual import path used in optionsDataService.ts
+// ...mirror the rest of optionsDataService.ts's imports
+
+interface Bar { date: string; open: number; high: number; low: number; close: number; volume: number; }
+
+function upsertFuturesBar(underlying: string, expiry: string, date: string, bar: Bar): void {
+  const stmt = marketDb.prepare(`
+    INSERT INTO futures_daily (underlying, expiry, date, open, high, low, close, volume)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(underlying, expiry, date) DO UPDATE SET
+      open   = excluded.open,
+      high   = excluded.high,
+      low    = excluded.low,
+      close  = excluded.close,
+      volume = excluded.volume
+  `);
+  stmt.run(underlying, expiry, date, bar.open, bar.high, bar.low, bar.close, bar.volume);
+}
+
+export async function runFuturesSyncJob(targetDate?: string): Promise<{
+  completed: number; noData: number; failed: number; skippedBudget: number;
+}> {
+  const date = targetDate ?? new Date().toISOString().slice(0, 10);
+
+  // Mirror optionsDataService.ts's runOptionsSyncJob early-exit guards
+  // exactly (check getServiceStats().remainingBudgetToday <= 0, and
+  // isTradingDay(date)) — copy that logic pattern directly.
+
+  const adapter = await getAuthenticatedAdapter();
+  if (!adapter) {
+    console.warn("[futuresDataService] Broker session unavailable — skipping futures sync");
+    return { completed: 0, noData: 0, failed: 0, skippedBudget: 0 };
+  }
+
+  // One front-month contract per underlying: nearest expiry >= date.
+  const contracts = marketDb.prepare(`
+    SELECT underlying, expiry, fyers_symbol
+      FROM futures_symbols
+     WHERE expiry >= ?
+     GROUP BY underlying
+    HAVING expiry = MIN(expiry)
+  `).all(date) as Array<{ underlying: string; expiry: string; fyers_symbol: string }>;
+
+  console.log("[futuresDataService] Nightly futures sync starting — %d underlyings for %s", contracts.length, date);
+
+  let completed = 0, noData = 0, failed = 0, skippedBudget = 0;
+
+  for (const c of contracts) {
+    if (!checkAndConsumeBudget()) { skippedBudget++; continue; }
+    try {
+      const bars = await throttleCall(() => adapter.getHistoricalData(c.fyers_symbol, "1", date, date));
+      if (bars.length > 0) {
+        upsertFuturesBar(c.underlying, c.expiry, date, bars[bars.length - 1]);
+        completed++;
+      } else {
+        noData++;
+      }
+    } catch (err) {
+      if (err instanceof AuthenticationError || err instanceof SessionExpiredError) {
+        console.error("[futuresDataService] Broker session unavailable mid-job — stopping cleanly");
+        break;
+      }
+      failed++;
+      console.error("[futuresDataService] ✗ %s: %s", c.underlying, err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  console.log(
+    "[futuresDataService] Nightly futures sync done — completed=%d noData=%d skippedBudget=%d failed=%d",
+    completed, noData, skippedBudget, failed
+  );
+  return { completed, noData, failed, skippedBudget };
+}
+
+Adjust import paths/helper names if they differ slightly from what's
+guessed above — match whatever optionsDataService.ts actually imports at
+its top, verify by reading that file's import block first.
+
+── Part B: server/src/config/environment.ts ─────────────────────────────
+
+Add a "futures" key to syncSchedule, right after "options":
+
+    options:      "0 17 * * 1-5",   // 5:00 PM IST
+    futures:      "5 17 * * 1-5",   // 5:05 PM IST — right after options
+
+── Part C: wire into catchUpScheduler.ts ─────────────────────────────────
+
+Add the import and a new entry to the JOBS array:
+
+  import { runFuturesSyncJob } from "./futuresDataService.js";
+  ...
+  { jobName: "futures_sync", scheduleKey: "futures", run: runFuturesSyncJob },
+
+Add this line right after the existing "options_sync" entry.
+
+── Part D: wire into scheduler.ts ────────────────────────────────────────
+
+Add the import and a new cron.schedule block, right after the existing
+options sync cron block:
+
+  import { runFuturesSyncJob } from "./futuresDataService.js";
+  ...
+  cron.schedule(
+    config.syncSchedule.futures,
+    () => {
+      console.log("[scheduler] Running scheduled futures sync …");
+      void runFuturesSyncJob().catch((err) => {
+        console.error("[scheduler] Futures sync failed:", err instanceof Error ? err.message : String(err));
+      });
+    },
+    { timezone: config.timezone }
+  );
+
+── Part E: new endpoint in server/src/routes/marketData.ts ─────────────
+
+Add GET /scanner/futures-universe-data, placed near the existing
+/scanner/options-universe-data route, reusing the same from/to query
+param validation pattern already in that file:
+
+  router.get("/scanner/futures-universe-data", (req: Request, res: Response) => {
+    // Reuse the same from/to param parsing as options-universe-data above.
+    const rows = marketDb.prepare(`
+      SELECT underlying, expiry, date, close
+        FROM futures_daily
+       WHERE date BETWEEN ? AND ?
+       ORDER BY underlying, date
+    `).all(from, to) as Array<{ underlying: string; expiry: string; date: string; close: number }>;
+
+    const underlyingCount = new Set(rows.map(r => r.underlying)).size;
+    res.json({ underlyings: underlyingCount, bars: rows.length, data: rows });
+    console.log(
+      "[marketData] /scanner/futures-universe-data — %d underlyings, %d daily bars (%s → %s)",
+      underlyingCount, rows.length, from, to
+    );
+  });
+
+Test: apply, restart. futures_daily will stay empty until the next
+5:05 PM IST scheduled run (or until market-closed testing triggers it) —
+that's expected. If you want to test sooner without waiting, check
+whether optionsDataService.ts's runOptionsSyncJob is reachable via any
+existing manual test route in marketData.ts or a debug route, and if so,
+add an equivalent one for runFuturesSyncJob; otherwise just wait for the
+scheduled run and share the "[futuresDataService] Nightly futures sync
+done" log line when it appears.

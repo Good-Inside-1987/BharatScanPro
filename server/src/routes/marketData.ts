@@ -599,6 +599,55 @@ router.get("/scanner/options-universe-data", (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /scanner/futures-universe-data?from=YYYY-MM-DD&to=YYYY-MM-DD
+ *
+ * Read-only endpoint that queries futures_daily directly — NO broker calls,
+ * NO budget consumption.  Returns the front-month close price for each
+ * underlying in the requested date range, suitable for feeding into scanner
+ * strategies that use futures close instead of spot close.
+ */
+router.get("/scanner/futures-universe-data", (req: Request, res: Response) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const twoYearsAgo = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 2);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  const rawFrom = req.query.from;
+  const rawTo   = req.query.to;
+  const from = (typeof rawFrom === "string" && DATE_RE.test(rawFrom)) ? rawFrom : twoYearsAgo;
+  const to   = (typeof rawTo   === "string" && DATE_RE.test(rawTo))   ? rawTo   : today;
+
+  if (from > to) {
+    res.status(400).json({ error: "from must not be after to" });
+    return;
+  }
+
+  try {
+    const rows = marketDb.prepare(`
+      SELECT underlying, expiry, date, close
+        FROM futures_daily
+       WHERE date BETWEEN ? AND ?
+       ORDER BY underlying, date
+    `).all(from, to) as Array<{ underlying: string; expiry: string; date: string; close: number }>;
+
+    const underlyingCount = new Set(rows.map((r) => r.underlying)).size;
+    console.log(
+      "[marketData] /scanner/futures-universe-data — %d underlyings, %d daily bars (%s → %s)",
+      underlyingCount, rows.length, from, to,
+    );
+    res.json({ underlyings: underlyingCount, bars: rows.length, data: rows });
+  } catch (err) {
+    console.error(
+      "[marketData] /scanner/futures-universe-data error:",
+      err instanceof Error ? err.message : err,
+    );
+    res.status(500).json({ error: "Failed to query local futures_daily table" });
+  }
+});
+
 router.get("/scheduler-status", (_req: Request, res: Response) => {
   res.json(getSchedulerStatus());
 });

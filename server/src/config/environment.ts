@@ -100,6 +100,7 @@ export const config = {
     eod:          "0 16 * * 1-5",   // 4:00 PM IST — after market close
     intraday:     "30 16 * * 1-5",  // 4:30 PM IST
     options:      "0 17 * * 1-5",   // 5:00 PM IST
+    futures:      "5 17 * * 1-5",   // 5:05 PM IST — right after options
     supplementary:"30 17 * * 1-5",  // 5:30 PM IST — FII/DII, PE, MF
     cleanup:      "0 18 * * 1-5",   // 6:00 PM IST — delete old data
     liveOpen:     "0 9 * * 1-5",    // 9:00 AM IST — start WebSocket

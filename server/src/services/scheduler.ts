@@ -17,6 +17,7 @@ import { syncSymbolMaster } from "./symbolMasterService.js";
 import { syncNseHolidayCalendar } from "./holidayCalendarService.js";
 import { runEodSyncJob, runIntradaySyncJob, todayIST, cleanupOrphanedSyncLogs } from "./syncJobs.js";
 import { runOptionsSyncJob } from "./optionsDataService.js";
+import { runFuturesSyncJob } from "./futuresDataService.js";
 import { runFoBanListJob } from "./foBanListService.js";
 import { runSupplementaryJob, runMfHoldingsJob } from "./supplementaryJobs.js";
 import { runCleanupJob } from "./cleanupJob.js";
@@ -344,6 +345,18 @@ export async function registerAllCronJobs(): Promise<void> {
     { timezone: config.timezone }
   );
 
+  // Nightly futures sync — 5:05 PM IST, front-month daily bar per F&O underlying.
+  cron.schedule(
+    config.syncSchedule.futures,
+    () => {
+      console.log("[scheduler] Running scheduled futures sync …");
+      void runFuturesSyncJob().catch((err) => {
+        console.error("[scheduler] Futures sync failed:", err instanceof Error ? err.message : String(err));
+      });
+    },
+    { timezone: config.timezone }
+  );
+
   // F&O ban list — 8:30 AM IST (before market open). Fetches NSE's daily list
   // of securities banned from fresh F&O positions due to MWPL breach.
   cron.schedule(
@@ -453,6 +466,10 @@ export function getSchedulerStatus() {
       options: {
         expression: config.syncSchedule.options,
         nextRun: schedulerActive ? nextFireTime(config.syncSchedule.options) : null,
+      },
+      futures: {
+        expression: config.syncSchedule.futures,
+        nextRun: schedulerActive ? nextFireTime(config.syncSchedule.futures) : null,
       },
       foBanList: {
         expression: config.syncSchedule.foBanList,

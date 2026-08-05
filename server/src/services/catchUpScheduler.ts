@@ -37,6 +37,7 @@ import {
   todayIST,
 } from "./syncJobs.js";
 import { runOptionsSyncJob } from "./optionsDataService.js";
+import { runFuturesSyncJob } from "./futuresDataService.js";
 import { runFoBanListJob } from "./foBanListService.js";
 import { runSupplementaryJob } from "./supplementaryJobs.js";
 import { getServiceStats } from "./marketDataService.js";
@@ -63,6 +64,7 @@ const JOBS: CatchUpJob[] = [
   { jobName: "eod_sync",     scheduleKey: "eod",           run: runEodSyncJob },
   { jobName: "intraday_sync",scheduleKey: "intraday",      run: runIntradaySyncJob },
   { jobName: "options_sync", scheduleKey: "options",       run: runOptionsSyncJob },
+  { jobName: "futures_sync", scheduleKey: "futures",       run: runFuturesSyncJob },
   { jobName: "fo_ban_list",  scheduleKey: "foBanList",     run: runFoBanListJob },
   { jobName: "supplementary",scheduleKey: "supplementary", run: runSupplementaryJob },
 ];
