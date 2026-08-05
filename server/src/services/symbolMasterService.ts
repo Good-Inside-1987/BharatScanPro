@@ -183,6 +183,47 @@ async function runSync(marketDb: DatabaseSync): Promise<SymbolMasterResult> {
       if (symbol) foUnderlyings.add(symbol);
     }
     console.log(`[symbol-master] F&O underlyings: ${foUnderlyings.size}`);
+
+    // [DEBUG-TEMP] Log a few raw futures rows to determine exact column
+    // layout for expiry, fyers_symbol, instrument_type, lot_size before
+    // building futures data pipeline.
+    {
+      // Collect up to 8 futures rows, but ensure we get at least one index
+      // future (e.g. NIFTY) and one stock future (e.g. RELIANCE) if present,
+      // rather than just the first 8 which may all be the same underlying.
+      const futSamples: string[][] = [];
+      const seenUnderlyings = new Set<string>();
+      for (const line of foLines) {
+        if (futSamples.length >= 8) break;
+        const cols = line.split(",");
+        if ((cols[1] ?? "").toUpperCase().includes("FUT")) {
+          // Use the first column as a rough underlying key to diversify samples
+          const underlying = (cols[0] ?? "").trim();
+          if (futSamples.length < 4 || !seenUnderlyings.has(underlying)) {
+            seenUnderlyings.add(underlying);
+            futSamples.push(cols);
+          }
+        }
+      }
+      // If first pass produced fewer than 8, do a second pass without the
+      // diversity filter to fill remaining slots.
+      if (futSamples.length < 8) {
+        let futSampleCount = futSamples.length;
+        for (const line of foLines) {
+          if (futSampleCount >= 8) break;
+          const cols = line.split(",");
+          if ((cols[1] ?? "").toUpperCase().includes("FUT")) {
+            if (!futSamples.includes(cols)) {
+              futSamples.push(cols);
+              futSampleCount++;
+            }
+          }
+        }
+      }
+      for (const cols of futSamples) {
+        console.log("[DEBUG-TEMP] FUT row:", JSON.stringify(cols));
+      }
+    }
   }
 
   // 3. CM symbol master — parse EQ instruments only
