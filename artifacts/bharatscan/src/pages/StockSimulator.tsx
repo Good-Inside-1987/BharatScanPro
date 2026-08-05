@@ -937,39 +937,6 @@ export default function StockSimulator() {
                 )}
               </div>
 
-              {/* Payoff chart */}
-              <div className="shrink-0 border-b border-border/30" style={{ height: 240 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={payoffData} margin={{ top: 12, right: 24, bottom: 12, left: 8 }}>
-                    <defs>
-                      <linearGradient id="ssGradPos" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#4ade80" stopOpacity={0.22} />
-                        <stop offset="95%" stopColor="#4ade80" stopOpacity={0.04} />
-                      </linearGradient>
-                      <linearGradient id="ssGradNeg" x1="0" y1="1" x2="0" y2="0">
-                        <stop offset="5%"  stopColor="#f87171" stopOpacity={0.22} />
-                        <stop offset="95%" stopColor="#f87171" stopOpacity={0.04} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-                    <XAxis dataKey="price" type="number" domain={["dataMin","dataMax"]}
-                      tick={{ fill: "#6b7280", fontSize: 10 }}
-                      tickFormatter={v => `₹${Number(v).toLocaleString("en-IN",{maximumFractionDigits:0})}`}
-                      tickLine={false} axisLine={{ stroke: "#374151" }} />
-                    <YAxis domain={yDomain as [number,number]}
-                      tick={{ fill: "#6b7280", fontSize: 10 }}
-                      tickFormatter={v => v === 0 ? "0" : `${v>=0?"+":""}${(v/1000).toFixed(0)}K`}
-                      tickLine={false} axisLine={false} width={48} />
-                    <Tooltip content={<PayoffTooltip />} />
-                    <ReferenceLine x={refPrice} stroke="#6366f1" strokeDasharray="4 3" strokeWidth={1.5}
-                      label={{ value: "LTP", fill: "#6366f1", fontSize: 9, position: "insideTopRight" }} />
-                    <ReferenceLine y={0} stroke="#374151" strokeWidth={1.5} />
-                    <Area dataKey="pnlPos" fill="url(#ssGradPos)" stroke="#4ade80" strokeWidth={2} dot={false} activeDot={false} isAnimationActive={false} />
-                    <Area dataKey="pnlNeg" fill="url(#ssGradNeg)" stroke="#f87171" strokeWidth={2} dot={false} activeDot={false} isAnimationActive={false} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-
               {/* Positions table */}
               <div className="flex-1 overflow-y-auto px-3 py-2">
                 {/* Header */}
