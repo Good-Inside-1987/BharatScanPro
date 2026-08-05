@@ -287,6 +287,7 @@ export async function loadOptionsFromBroker(
 
 interface UnderlyingSyncResult {
   completed: number;
+  noData: number;
   failed: number;
   budgetExhausted: boolean;
   /** True when Fyers signals its options-chain quota is exhausted for the day. */
@@ -398,7 +399,7 @@ async function syncOptionsForUnderlying(
   const anyAdapter = adapter as unknown as Record<string, unknown>;
   if (typeof anyAdapter.getOptionExpiries !== "function") {
     console.warn("[optionsDataService] Connected broker has no option-expiry lookup — skipping %s", uName);
-    return { completed: 0, failed: 0, budgetExhausted: false };
+    return { completed: 0, noData: 0, failed: 0, budgetExhausted: false };
   }
 
   let expiries: string[];
@@ -409,19 +410,19 @@ async function syncOptionsForUnderlying(
     // Hard quota exhausted — signal the outer loop to stop cleanly.
     if (isHardRateLimit(err)) {
       console.warn("[optionsDataService] Fyers options-chain daily quota reached at %s — stopping job", uName);
-      return { completed: 0, failed: 0, budgetExhausted: false, rateLimited: true };
+      return { completed: 0, noData: 0, failed: 0, budgetExhausted: false, rateLimited: true };
     }
     try { classifyAdapterError(err); } catch (classified) {
       if (classified instanceof AuthenticationError || classified instanceof SessionExpiredError) throw classified;
     }
     console.error("[optionsDataService] Failed to fetch expiries for %s: %s", uName, err instanceof Error ? err.message : String(err));
-    return { completed: 0, failed: 1, budgetExhausted: false };
+    return { completed: 0, noData: 0, failed: 1, budgetExhausted: false };
   }
 
   const expiry = pickNearestExpiry(expiries, date);
   if (!expiry) {
     console.warn("[optionsDataService] No expiries returned for %s — skipping", uName);
-    return { completed: 0, failed: 0, budgetExhausted: false };
+    return { completed: 0, noData: 0, failed: 0, budgetExhausted: false };
   }
 
   let chain;
@@ -431,13 +432,13 @@ async function syncOptionsForUnderlying(
     // Hard quota exhausted — signal the outer loop to stop cleanly.
     if (isHardRateLimit(err)) {
       console.warn("[optionsDataService] Fyers options-chain daily quota reached at %s — stopping job", uName);
-      return { completed: 0, failed: 0, budgetExhausted: false, rateLimited: true };
+      return { completed: 0, noData: 0, failed: 0, budgetExhausted: false, rateLimited: true };
     }
     try { classifyAdapterError(err); } catch (classified) {
       if (classified instanceof AuthenticationError || classified instanceof SessionExpiredError) throw classified;
     }
     console.error("[optionsDataService] Failed to fetch option chain for %s %s: %s", uName, expiry, err instanceof Error ? err.message : String(err));
-    return { completed: 0, failed: 1, budgetExhausted: false };
+    return { completed: 0, noData: 0, failed: 1, budgetExhausted: false };
   }
 
   // Resolve spot price: prefer the live value from the options chain API
@@ -459,7 +460,7 @@ async function syncOptionsForUnderlying(
         "Run EOD/intraday sync first so the closing price is available for options ATM selection.",
         uName, date
       );
-      return { completed: 0, failed: 0, budgetExhausted: false };
+      return { completed: 0, noData: 0, failed: 0, budgetExhausted: false };
     }
   }
 
@@ -483,7 +484,7 @@ async function syncOptionsForUnderlying(
 
   if (items.length === 0) {
     console.warn("[optionsDataService] No option symbols in chain for %s %s — skipping", uName, expiry);
-    return { completed: 0, failed: 0, budgetExhausted: false };
+    return { completed: 0, noData: 0, failed: 0, budgetExhausted: false };
   }
 
   console.log(
@@ -492,6 +493,7 @@ async function syncOptionsForUnderlying(
   );
 
   let completed = 0;
+  let noData = 0;
   let failed = 0;
   let budgetExhausted = false;
 
@@ -507,9 +509,8 @@ async function syncOptionsForUnderlying(
         completed++;
       } else {
         // No candle for this date (e.g. contract didn't trade) — not a
-        // failure, but not "completed" data either. Count it alongside
-        // failed for visibility without inflating the completed count.
-        failed++;
+        // failure, just nothing to report.
+        noData++;
       }
     } catch (err) {
       failed++;
@@ -517,7 +518,7 @@ async function syncOptionsForUnderlying(
     }
   }
 
-  return { completed, failed, budgetExhausted };
+  return { completed, noData, failed, budgetExhausted };
 }
 
 function monthsAgoIso(months: number): string {
@@ -572,6 +573,7 @@ function cleanupOldOptionsRows(): void {
 
 export interface OptionsSyncStats {
   completed: number;
+  noData: number;
   failed: number;
   skippedBudget: number;
   skippedNoAdapter?: boolean;
@@ -595,20 +597,20 @@ export async function runOptionsSyncJob(
     const adapter = await getAuthenticatedAdapter();
     if (!adapter) {
       console.warn("[optionsDataService] Nightly options sync skipped — no broker connected");
-      finishSyncLog(logId, "failed", { completed: 0, skippedBudget: 0, failed: 0 }, "No broker connected");
-      return { completed: 0, failed: 0, skippedBudget: 0, skippedNoAdapter: true };
+      finishSyncLog(logId, "failed", { completed: 0, noData: 0, skippedBudget: 0, failed: 0 }, "No broker connected");
+      return { completed: 0, noData: 0, failed: 0, skippedBudget: 0, skippedNoAdapter: true };
     }
 
     if (getServiceStats().remainingBudgetToday <= 0) {
       console.warn("[optionsDataService] Nightly options sync skipped — daily request budget already exhausted");
-      finishSyncLog(logId, "completed", { completed: 0, skippedBudget: 0, failed: 0 }, "Daily request budget already exhausted");
-      return { completed: 0, failed: 0, skippedBudget: 0 };
+      finishSyncLog(logId, "completed", { completed: 0, noData: 0, skippedBudget: 0, failed: 0 }, "Daily request budget already exhausted");
+      return { completed: 0, noData: 0, failed: 0, skippedBudget: 0 };
     }
 
     if (!isTradingDay(date)) {
       console.log("[optionsDataService] %s is not a trading day — skipping options sync, 0 budget spent", date);
-      finishSyncLog(logId, "completed", { completed: 0, skippedBudget: 0, failed: 0 });
-      return { completed: 0, failed: 0, skippedBudget: 0 };
+      finishSyncLog(logId, "completed", { completed: 0, noData: 0, skippedBudget: 0, failed: 0 });
+      return { completed: 0, noData: 0, failed: 0, skippedBudget: 0 };
     }
 
     const underlyings: string[] = [...config.optionsIndices];
@@ -625,6 +627,7 @@ export async function runOptionsSyncJob(
     );
 
     let completed = 0;
+    let noData = 0;
     let failed = 0;
     let skippedBudget = 0;
     let budgetExhausted = false;
@@ -649,6 +652,7 @@ export async function runOptionsSyncJob(
         throw err;
       }
       completed += result.completed;
+      noData += result.noData;
       failed += result.failed;
 
       if (result.rateLimited) {
@@ -681,20 +685,20 @@ export async function runOptionsSyncJob(
 
     // Retention cleanup is handled centrally by cleanupJob.ts (6 PM IST).
 
-    const stats = { completed, skippedBudget, failed };
+    const stats = { completed, noData, skippedBudget, failed };
     if (completed === 0 && underlyings.length > 0) {
       finishSyncLog(logId, "failed", stats, "All underlyings failed — 0 of " + underlyings.length + " completed");
     } else {
       finishSyncLog(logId, "completed", stats);
     }
     console.log(
-      "[optionsDataService] Nightly options sync done — completed=%d skippedBudget=%d failed=%d",
-      completed, skippedBudget, failed
+      "[optionsDataService] Nightly options sync done — completed=%d noData=%d skippedBudget=%d failed=%d",
+      completed, noData, skippedBudget, failed
     );
     return stats;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    finishSyncLog(logId, "failed", { completed: 0, skippedBudget: 0, failed: 0 }, message);
+    finishSyncLog(logId, "failed", { completed: 0, noData: 0, skippedBudget: 0, failed: 0 }, message);
     console.error("[optionsDataService] Nightly options sync crashed:", message);
     throw err;
   }
