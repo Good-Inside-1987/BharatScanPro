@@ -244,6 +244,36 @@ export function initMarketDb(db: DatabaseSync): void {
       expiry     TEXT NOT NULL,
       PRIMARY KEY (underlying, date)
     );
+
+    -- ── Futures symbols (populated during symbol-master sync) ─────────────
+    -- Stores the active Fyers contract symbol for each (underlying, expiry)
+    -- pair, sourced directly from the NSE_FO.csv col 9 value.
+    CREATE TABLE IF NOT EXISTS futures_symbols (
+      underlying    TEXT NOT NULL,
+      expiry        TEXT NOT NULL,   -- YYYY-MM-DD
+      fyers_symbol  TEXT NOT NULL,
+      lot_size      INTEGER,
+      tick_size     REAL,
+      updated_at    TEXT NOT NULL,
+      UNIQUE(underlying, expiry)
+    );
+
+    -- ── Futures daily OHLCV ───────────────────────────────────────────────
+    -- Populated by the futures daily-sync job (Part 2).  Created here so the
+    -- schema is consistent from first boot; stays empty until the sync job exists.
+    CREATE TABLE IF NOT EXISTS futures_daily (
+      underlying  TEXT NOT NULL,
+      expiry      TEXT NOT NULL,   -- YYYY-MM-DD
+      date        TEXT NOT NULL,   -- YYYY-MM-DD
+      open        REAL,
+      high        REAL,
+      low         REAL,
+      close       REAL,
+      volume      INTEGER,
+      UNIQUE(underlying, expiry, date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_futures_daily
+      ON futures_daily(underlying, date);
   `);
 
   // Migrate any older backfill_progress schema that used earliest/latest

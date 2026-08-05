@@ -172,7 +172,16 @@ async function runSync(marketDb: DatabaseSync): Promise<SymbolMasterResult> {
   // 1. NSE index data (best-effort — won't abort if NSE is unreachable)
   const { indexMap, sectorMap } = await fetchNseIndexData();
 
-  // 2. F&O underlyings — build a set of symbol names that have F&O contracts
+  // 2. F&O underlyings — build a set of symbol names that have F&O contracts,
+  //    and collect futures contract rows for upsert into futures_symbols.
+  interface FuturesContractRow {
+    underlying: string;
+    expiry: string;       // YYYY-MM-DD, converted from the unix timestamp
+    fyersSymbol: string;
+    lotSize: number;
+    tickSize: number;
+  }
+  const futuresContracts: FuturesContractRow[] = [];
   const foUnderlyings = new Set<string>();
   {
     const foText  = await fetchText(FYERS_FO_URL, BROWSER_HEADERS);
@@ -181,48 +190,43 @@ async function runSync(marketDb: DatabaseSync): Promise<SymbolMasterResult> {
       const cols   = line.split(",");
       const symbol = cols[CM_COL_SYMBOL]?.trim();
       if (symbol) foUnderlyings.add(symbol);
+
+      // Collect futures contracts (FUTIDX=11, FUTSTK=13) for futures_symbols.
+      // Instrument type is at col 2 (same layout as CM file). Col 11 is the
+      // NSE F&O segment code and is "11" for ALL F&O rows — using it would
+      // incorrectly include options rows.
+      const instrType = cols[2]?.trim();
+      if (instrType === "11" || instrType === "13") {
+        const expiryUnix  = Number(cols[8]);
+        const fyersSymbol = cols[9]?.trim();
+        const lotSize     = Number(cols[3]);
+        const tickSize    = Number(cols[4]);
+        if (symbol && fyersSymbol && Number.isFinite(expiryUnix) && expiryUnix > 0) {
+          futuresContracts.push({
+            underlying: symbol,
+            expiry: new Date(expiryUnix * 1000).toISOString().slice(0, 10),
+            fyersSymbol,
+            lotSize: Number.isFinite(lotSize) ? lotSize : 0,
+            tickSize: Number.isFinite(tickSize) ? tickSize : 0,
+          });
+        }
+      }
     }
     console.log(`[symbol-master] F&O underlyings: ${foUnderlyings.size}`);
+    console.log(`[symbol-master] Futures contracts found: ${futuresContracts.length}`);
 
-    // [DEBUG-TEMP] Log a few raw futures rows to determine exact column
-    // layout for expiry, fyers_symbol, instrument_type, lot_size before
-    // building futures data pipeline.
-    {
-      // Collect up to 8 futures rows, but ensure we get at least one index
-      // future (e.g. NIFTY) and one stock future (e.g. RELIANCE) if present,
-      // rather than just the first 8 which may all be the same underlying.
-      const futSamples: string[][] = [];
-      const seenUnderlyings = new Set<string>();
-      for (const line of foLines) {
-        if (futSamples.length >= 8) break;
-        const cols = line.split(",");
-        if ((cols[1] ?? "").toUpperCase().includes("FUT")) {
-          // Use the first column as a rough underlying key to diversify samples
-          const underlying = (cols[0] ?? "").trim();
-          if (futSamples.length < 4 || !seenUnderlyings.has(underlying)) {
-            seenUnderlyings.add(underlying);
-            futSamples.push(cols);
-          }
-        }
-      }
-      // If first pass produced fewer than 8, do a second pass without the
-      // diversity filter to fill remaining slots.
-      if (futSamples.length < 8) {
-        let futSampleCount = futSamples.length;
-        for (const line of foLines) {
-          if (futSampleCount >= 8) break;
-          const cols = line.split(",");
-          if ((cols[1] ?? "").toUpperCase().includes("FUT")) {
-            if (!futSamples.includes(cols)) {
-              futSamples.push(cols);
-              futSampleCount++;
-            }
-          }
-        }
-      }
-      for (const cols of futSamples) {
-        console.log("[DEBUG-TEMP] FUT row:", JSON.stringify(cols));
-      }
+    const futStmt = marketDb.prepare(`
+      INSERT INTO futures_symbols (underlying, expiry, fyers_symbol, lot_size, tick_size, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(underlying, expiry) DO UPDATE SET
+        fyers_symbol = excluded.fyers_symbol,
+        lot_size     = excluded.lot_size,
+        tick_size    = excluded.tick_size,
+        updated_at   = excluded.updated_at
+    `);
+    const nowIso = new Date().toISOString();
+    for (const fc of futuresContracts) {
+      futStmt.run(fc.underlying, fc.expiry, fc.fyersSymbol, fc.lotSize, fc.tickSize, nowIso);
     }
   }
 
