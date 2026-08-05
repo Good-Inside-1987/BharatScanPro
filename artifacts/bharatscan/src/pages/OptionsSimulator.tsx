@@ -444,6 +444,11 @@ function OIHBar({ value, max, color, align }: { value: number; max: number; colo
 // Time navigator helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Returns true when the simulator clock is on or after the leg's entry timestamp.
+function isLegActive(entryDate: string, entryTime: string, curDate: string, curTime: string): boolean {
+  return `${curDate}T${curTime}` >= `${entryDate}T${entryTime}`;
+}
+
 function tradeDuration(entryDate: string, entryTime: string, curDate: string, curTime: string): string {
   const entryMs = new Date(`${entryDate}T${entryTime}:00`).getTime();
   const curMs   = new Date(`${curDate}T${curTime}:00`).getTime();
@@ -915,11 +920,12 @@ export default function OptionsSimulator() {
   const [autoSL,  setAutoSL]  = useState(false);
   const [autoTgt, setAutoTgt] = useState(false);
 
-  // Auto-squareoff on SL / Target breach
+  // Auto-squareoff on SL / Target breach (only for active legs)
   useEffect(() => {
     if (!legs.length || editingSlTgt.current) return;
     const toSquareOff: string[] = [];
     for (const leg of legs) {
+      if (!isLegActive(leg.addedDate ?? "", leg.addedTime ?? "00:00", effectiveDate, simTime)) continue;
       const ltp = getLegLTP(leg);
       if (ltp <= 0) continue;
       const isBuy = leg.action === "BUY";
@@ -1021,24 +1027,30 @@ export default function OptionsSimulator() {
   // Payoff chart data
   const payoffData = useMemo(() => {
     if (!legs.length || !spot) return [];
+    // Only active legs contribute to payoff/stats
+    const activeLegs = legs.filter(l => isLegActive(l.addedDate ?? "", l.addedTime ?? "00:00", effectiveDate, simTime));
+    if (!activeLegs.length) return [];
     const lo = spot * 0.82; const hi = spot * 1.18;
     const steps = 150; const step = (hi - lo) / steps;
     return Array.from({ length: steps + 1 }, (_, i) => {
       const s = lo + i * step;
-      return { spot: +s.toFixed(0), pnl: +payoffAtExpiry(legs, s, lotSize).toFixed(0) };
+      return { spot: +s.toFixed(0), pnl: +payoffAtExpiry(activeLegs, s, lotSize).toFixed(0) };
     });
-  }, [legs, spot, lotSize]);
+  }, [legs, spot, lotSize, effectiveDate, simTime]);
 
   // Combined payoff + OI data for the chart — zoom-aware window, OI bars only ±8 strikes from ATM
   const payoffChartData = useMemo(() => {
     if (!legs.length || !spot) return [];
+    // Only active legs in the chart
+    const activeLegs = legs.filter(l => isLegActive(l.addedDate ?? "", l.addedTime ?? "00:00", effectiveDate, simTime));
+    if (!activeLegs.length) return [];
     const pts = chartZoom === "narrow" ? 500 : chartZoom === "wide" ? 2000 : 1000;
     const lo = spot - pts; const hi = spot + pts;
     const steps = 300; const step = (hi - lo) / steps;
 
     // Pre-compute per-leg IV from current market price (once, at current spot)
     const T = Math.max(dte / 365, 1 / 365);
-    const legIVs = legs.map((leg) => {
+    const legIVs = activeLegs.map((leg) => {
       const row = chain.find((r) => r.strike === leg.strike);
       const mktPrice = row ? (leg.type === "CE" ? row.ce : row.pe) : leg.entryPrice;
       return mktPrice > 0 ? solveIV(mktPrice, spot, leg.strike, T, leg.type) : 0.20;
@@ -1056,10 +1068,10 @@ export default function OptionsSimulator() {
     const oiMap = new Map(chain.map((r) => [r.strike, { ceOI: r.ceOI, peOI: r.peOI }]));
     const raw = Array.from({ length: steps + 1 }, (_, i) => {
       const s = lo + i * step;
-      const pnl = +payoffAtExpiry(legs, s, lotSize).toFixed(0);
+      const pnl = +payoffAtExpiry(activeLegs, s, lotSize).toFixed(0);
 
-      // Today's mark-to-market P&L — re-price each leg at hypothetical spot using its IV
-      const pnlToday = +legs.reduce((total, leg, li) => {
+      // Today's mark-to-market P&L — re-price each active leg at hypothetical spot using its IV
+      const pnlToday = +activeLegs.reduce((total, leg, li) => {
         const theorPrice = bsPrice(s, leg.strike, T, legIVs[li], leg.type);
         const legPnl = leg.action === "BUY"
           ? (theorPrice - leg.entryPrice) * leg.lots * lotSize
@@ -1085,7 +1097,7 @@ export default function OptionsSimulator() {
       ceOINorm: d.ceOI !== null ? +(d.ceOI * oiScale).toFixed(0) : null,
       peOINorm: d.peOI !== null ? +(-d.peOI * oiScale).toFixed(0) : null,
     }));
-  }, [legs, spot, lotSize, chain, chartZoom, dte]);
+  }, [legs, spot, lotSize, chain, chartZoom, dte, effectiveDate, simTime]);
 
   // 1SD implied move from ATM straddle price (≈ 0.68 × (CE + PE))
   const sdMove = useMemo(() => {
@@ -1124,17 +1136,18 @@ export default function OptionsSimulator() {
     // POP uses chart-range pnls (realistic window)
     const pop = +(pnls.filter((p) => p > 0).length / pnls.length * 100).toFixed(0);
     const bvs = computeBreakevens(legs, lotSize, spot);
-    // MtM P&L: compare current LTP (per leg's own expiry) vs entry price
-    const currentPnl = legs.reduce((total, leg) => {
+    // MtM P&L: only active legs contribute to the current P&L shown in the stats bar
+    const activeLegs = legs.filter(l => isLegActive(l.addedDate ?? "", l.addedTime ?? "00:00", effectiveDate, simTime));
+    const currentPnl = activeLegs.reduce((total, leg) => {
       const mktPrice = getLegLTP(leg);
       if (mktPrice <= 0) return total;
       const diff = leg.action === "BUY" ? mktPrice - leg.entryPrice : leg.entryPrice - mktPrice;
       return total + diff * leg.lots * lotSize;
     }, 0);
-    const margin = legs.filter((l) => l.action === "SELL").reduce((s, l) => s + l.entryPrice * l.lots * lotSize * 5, 0)
-      || legs.reduce((s, l) => s + l.entryPrice * l.lots * lotSize, 0);
+    const margin = activeLegs.filter((l) => l.action === "SELL").reduce((s, l) => s + l.entryPrice * l.lots * lotSize * 5, 0)
+      || activeLegs.reduce((s, l) => s + l.entryPrice * l.lots * lotSize, 0);
     return { maxProfit, maxLoss, maxProfitUnlimited, maxLossUnlimited, pop, bvs, currentPnl, margin };
-  }, [legs, payoffData, lotSize, spot, chain]);
+  }, [legs, payoffData, lotSize, spot, chain, effectiveDate, simTime]);
 
   const yDomain = useMemo(() => {
     if (!payoffChartData.length) return [-10000, 50000];
@@ -1769,13 +1782,14 @@ export default function OptionsSimulator() {
                         </thead>
                         <tbody>
                           {legs.map((leg) => {
-                            const ltp = getLegLTP(leg);
-                            // MtM P&L: (current LTP - entry) × lots × lotSize, not at-expiry intrinsic
-                            const pnlAtSpot = ltp > 0
+                            const active = isLegActive(leg.addedDate ?? "", leg.addedTime ?? "00:00", effectiveDate, simTime);
+                            const ltp = active ? getLegLTP(leg) : 0;
+                            // MtM P&L: (current LTP - entry) × lots × lotSize — inactive legs show nothing
+                            const pnlAtSpot = active && ltp > 0
                               ? +((leg.action === "BUY" ? ltp - leg.entryPrice : leg.entryPrice - ltp) * leg.lots * lotSize).toFixed(0)
                               : 0;
                             return (
-                              <tr key={leg.id} className="border-t border-border/20 hover:bg-muted/10 transition-colors">
+                              <tr key={leg.id} className={`border-t border-border/20 hover:bg-muted/10 transition-colors ${!active ? "opacity-50" : ""}`}>
                                 {/* Lots */}
                                 <td className="px-2 py-1 text-center">
                                   <div className="flex items-center justify-center gap-0.5">
@@ -1861,20 +1875,37 @@ export default function OptionsSimulator() {
                                 </td>
                                 {/* LTP */}
                                 <td className="px-2 py-1 text-center tabular-nums text-foreground text-[11px] font-medium">
-                                  {ltp > 0 ? ltp.toFixed(2) : "—"}
+                                  {active && ltp > 0 ? ltp.toFixed(2) : "—"}
                                 </td>
                                 {/* P&L */}
-                                <td className={`px-2 py-1 text-center tabular-nums font-bold text-[11px] whitespace-nowrap ${pnlAtSpot >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                                  {pnlAtSpot >= 0 ? "+" : ""}₹{Math.abs(pnlAtSpot).toLocaleString("en-IN")}
+                                <td className="px-2 py-1 text-center tabular-nums font-bold text-[11px] whitespace-nowrap">
+                                  {active ? (
+                                    <span className={pnlAtSpot >= 0 ? "text-emerald-400" : "text-red-400"}>
+                                      {pnlAtSpot >= 0 ? "+" : ""}₹{Math.abs(pnlAtSpot).toLocaleString("en-IN")}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400/80 border border-amber-500/20">
+                                      Pending
+                                    </span>
+                                  )}
                                 </td>
-                                {/* Time held */}
+                                {/* Time held / pending */}
                                 <td className="px-2 py-1 text-center">
-                                  <span
-                                    className="text-[10px] tabular-nums font-semibold text-sky-400/80"
-                                    title={`Entered: ${leg.addedDate} ${leg.addedTime} → Now: ${effectiveDate} ${simTime}`}
-                                  >
-                                    {leg.addedDate ? tradeDuration(leg.addedDate, leg.addedTime, effectiveDate, simTime) : "—"}
-                                  </span>
+                                  {active ? (
+                                    <span
+                                      className="text-[10px] tabular-nums font-semibold text-sky-400/80"
+                                      title={`Entered: ${leg.addedDate} ${leg.addedTime} → Now: ${effectiveDate} ${simTime}`}
+                                    >
+                                      {leg.addedDate ? tradeDuration(leg.addedDate, leg.addedTime, effectiveDate, simTime) : "—"}
+                                    </span>
+                                  ) : (
+                                    <span
+                                      className="text-[9px] tabular-nums text-muted-foreground/50"
+                                      title={`Entry at: ${leg.addedDate} ${leg.addedTime}`}
+                                    >
+                                      {leg.addedTime ?? "—"}
+                                    </span>
+                                  )}
                                 </td>
                                 {/* SL */}
                                 <td className="px-1 py-1 text-center">

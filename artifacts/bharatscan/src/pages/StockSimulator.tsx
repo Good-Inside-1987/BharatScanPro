@@ -74,6 +74,12 @@ function addMinutes(hhmm: string, delta: number): string {
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
+// Returns true when the simulator clock is on or after the leg's entry timestamp.
+// Inactive ("pending") legs should not show P&L and are excluded from chart/stats.
+function isLegActive(entryDate: string, entryTime: string, curDate: string, curTime: string): boolean {
+  return `${curDate}T${curTime}` >= `${entryDate}T${entryTime}`;
+}
+
 function tradeDuration(entryDate: string, entryTime: string, curDate: string, curTime: string): string {
   const entryMs = new Date(`${entryDate}T${entryTime}:00`).getTime();
   const curMs   = new Date(`${curDate}T${curTime}:00`).getTime();
@@ -443,11 +449,12 @@ export default function StockSimulator() {
   const [autoSL,  setAutoSL]  = useState(false);
   const [autoTgt, setAutoTgt] = useState(false);
 
-  // Auto-squareoff on SL / Target breach
+  // Auto-squareoff on SL / Target breach (only for active legs)
   useEffect(() => {
     if (!legs.length || editingSlTgt.current) return;
     const toRemove: string[] = [];
     for (const leg of legs) {
+      if (!isLegActive(leg.entryDate, leg.entryTime, effectiveDate, simTime)) continue;
       const cp = getPriceForSymbol(leg.symbol);
       if (cp <= 0) continue;
       const isBuy = leg.action === "BUY";
@@ -472,13 +479,16 @@ export default function StockSimulator() {
   // ── Payoff chart ──────────────────────────────────────────────────────────
   const payoffData = useMemo(() => {
     if (!legs.length || refPrice <= 0) return [];
+    // Only active legs contribute to the payoff chart
+    const activeLegs = legs.filter(l => isLegActive(l.entryDate, l.entryTime, effectiveDate, simTime));
+    if (!activeLegs.length) return [];
     const lo   = refPrice * 0.70;
     const hi   = refPrice * 1.30;
     const step = (hi - lo) / 250;
     return Array.from({ length: 251 }, (_, i) => {
       const x     = lo + i * step;
       const ratio = x / refPrice;
-      const pnl   = legs.reduce((total, leg) => {
+      const pnl   = activeLegs.reduce((total, leg) => {
         const cp   = getPriceForSymbol(leg.symbol);
         const exit = cp > 0 ? cp * ratio : leg.entryPrice * ratio;
         return total + (leg.action === "BUY"
@@ -492,24 +502,26 @@ export default function StockSimulator() {
         pnlNeg: Math.min(+pnl.toFixed(0), 0),
       };
     });
-  }, [legs, refPrice, getPriceForSymbol]);
+  }, [legs, refPrice, getPriceForSymbol, effectiveDate, simTime]);
 
   const stats = useMemo(() => {
     if (!legs.length) return null;
-    const currentPnl = legs.reduce((total, leg) => {
+    // Only active legs contribute to aggregated P&L and invested capital
+    const activeLegs = legs.filter(l => isLegActive(l.entryDate, l.entryTime, effectiveDate, simTime));
+    const currentPnl = activeLegs.reduce((total, leg) => {
       const cp = getPriceForSymbol(leg.symbol);
       if (!cp) return total;
       return total + (leg.action === "BUY"
         ? (cp - leg.entryPrice) * leg.qty
         : (leg.entryPrice - cp) * leg.qty);
     }, 0);
-    const invested = legs.reduce((s, l) => s + l.entryPrice * l.qty, 0);
+    const invested = activeLegs.reduce((s, l) => s + l.entryPrice * l.qty, 0);
     const breakevens: number[] = [];
     for (let i = 1; i < payoffData.length; i++)
       if (payoffData[i-1].pnl * payoffData[i].pnl < 0)
         breakevens.push(+((payoffData[i-1].price + payoffData[i].price) / 2).toFixed(2));
     return { currentPnl, invested, breakevens };
-  }, [legs, getPriceForSymbol, payoffData]);
+  }, [legs, getPriceForSymbol, payoffData, effectiveDate, simTime]);
 
   const yDomain = useMemo(() => {
     if (!payoffData.length) return [-50000, 50000];
@@ -999,13 +1011,14 @@ export default function StockSimulator() {
 
                 <div className="space-y-1">
                   {legs.map(leg => {
-                    const cp     = getPriceForSymbol(leg.symbol);
-                    const pnl    = cp > 0
+                    const active = isLegActive(leg.entryDate, leg.entryTime, effectiveDate, simTime);
+                    const cp     = active ? getPriceForSymbol(leg.symbol) : 0;
+                    const pnl    = active && cp > 0
                       ? (leg.action === "BUY"
                           ? (cp - leg.entryPrice) * leg.qty
                           : (leg.entryPrice - cp) * leg.qty)
                       : 0;
-                    const pnlPct = leg.entryPrice > 0 && cp > 0
+                    const pnlPct = active && leg.entryPrice > 0 && cp > 0
                       ? ((leg.action === "BUY"
                             ? (cp - leg.entryPrice) / leg.entryPrice
                             : (leg.entryPrice - cp) / leg.entryPrice) * 100)
@@ -1014,8 +1027,10 @@ export default function StockSimulator() {
 
                     return (
                       <div key={leg.id}
-                        className={`grid grid-cols-[32px_1fr_70px_80px_80px_80px_90px_50px_40px_40px_60px] gap-x-2 items-center px-2 py-1.5 rounded-lg bg-muted/10 border ${
-                          pnl >= 0 ? "border-emerald-500/20" : "border-red-500/20"
+                        className={`grid grid-cols-[32px_1fr_70px_80px_80px_80px_90px_50px_40px_40px_60px] gap-x-2 items-center px-2 py-1.5 rounded-lg border transition-opacity ${
+                          !active
+                            ? "bg-muted/5 border-border/20 opacity-55"
+                            : pnl >= 0 ? "bg-muted/10 border-emerald-500/20" : "bg-muted/10 border-red-500/20"
                         }`}
                       >
                         {/* Side badge */}
@@ -1059,30 +1074,47 @@ export default function StockSimulator() {
                         {/* LTP */}
                         <div className="text-center">
                           <p className="text-[11px] tabular-nums font-semibold text-foreground">
-                            {cp > 0 ? fmtPrice(cp) : "—"}
+                            {active && cp > 0 ? fmtPrice(cp) : "—"}
                           </p>
                         </div>
 
                         {/* P&L */}
                         <div className="text-center">
-                          <p className={`text-[11px] tabular-nums font-bold ${pnlColor}`}>
-                            {pnl >= 0 ? "+" : ""}₹{Math.round(pnl).toLocaleString("en-IN")}
-                          </p>
-                          {cp > 0 && (
-                            <p className={`text-[9px] tabular-nums ${pnlColor} opacity-70`}>
-                              {pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(2)}%
-                            </p>
+                          {active ? (
+                            <>
+                              <p className={`text-[11px] tabular-nums font-bold ${pnlColor}`}>
+                                {pnl >= 0 ? "+" : ""}₹{Math.round(pnl).toLocaleString("en-IN")}
+                              </p>
+                              {cp > 0 && (
+                                <p className={`text-[9px] tabular-nums ${pnlColor} opacity-70`}>
+                                  {pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(2)}%
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400/80 border border-amber-500/20">
+                              Pending
+                            </span>
                           )}
                         </div>
 
-                        {/* Time held */}
+                        {/* Time held / pending */}
                         <div className="text-center">
-                          <span
-                            className="text-[10px] tabular-nums font-semibold text-sky-400/80"
-                            title={`Entered: ${leg.entryDate} ${leg.entryTime} → Now: ${effectiveDate} ${simTime}`}
-                          >
-                            {tradeDuration(leg.entryDate, leg.entryTime, effectiveDate, simTime)}
-                          </span>
+                          {active ? (
+                            <span
+                              className="text-[10px] tabular-nums font-semibold text-sky-400/80"
+                              title={`Entered: ${leg.entryDate} ${leg.entryTime} → Now: ${effectiveDate} ${simTime}`}
+                            >
+                              {tradeDuration(leg.entryDate, leg.entryTime, effectiveDate, simTime)}
+                            </span>
+                          ) : (
+                            <span
+                              className="text-[9px] tabular-nums text-muted-foreground/50"
+                              title={`Entry at: ${leg.entryDate} ${leg.entryTime}`}
+                            >
+                              {leg.entryTime}
+                            </span>
+                          )}
                         </div>
 
                         {/* SL */}
