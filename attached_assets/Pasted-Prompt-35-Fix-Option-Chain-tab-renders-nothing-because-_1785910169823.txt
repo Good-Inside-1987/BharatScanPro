@@ -1,0 +1,75 @@
+Prompt 35 — Fix: Option Chain tab renders nothing because "spot" is always
+0. Also fixes silently-inaccurate ATM highlighting and P&L graph in
+Options Simulator (same root cause).
+
+Root cause: both OptionChain.tsx and OptionsSimulator.tsx compute their
+reference "spot" price exclusively from optionsData.futuresCloseByKey,
+which is only ever populated by a manual CSV upload (handleOptionsUpload
+in DataContext.tsx) via a `futures` array. The normal DB auto-load path
+(useEffect fetching /api/market-data/scanner/options-universe-data) always
+passes an empty futures array (`prev?.futures ?? []`), since the DB-backed
+endpoint only returns option contract bars (CE/PE), never futures data.
+So on every normal app session (no manual CSV), futuresCloseByKey is
+empty and spot is permanently 0 — silently breaking ATM highlighting and
+the payoff graph in Simulator, and completely blanking the chain in
+OptionChain.tsx (which explicitly gates rendering on spot > 0).
+
+Fix — in both files, fall back to the underlying's own latest-known close
+price (from `histories`, already reliably populated) whenever the
+futures-based price isn't available, instead of leaving spot at 0.
+
+1. In artifacts/bharatscan/src/pages/OptionsSimulator.tsx: the file
+   already computes `spotPrice` this way (see the existing "Spot
+   (underlying) price — from equity bhavcopy" block around line 742).
+   Change the primary `spot` calculation (around line 735) to prefer the
+   futures price but fall back to spotPrice:
+
+  const spot = useMemo(() => {
+    if (!optionsData || !activeSymbol || !effectiveDate) return 0;
+    const key = `${activeSymbol}|${effectiveDate}`;
+    const futuresClose = optionsData.futuresCloseByKey.get(key) ?? 0;
+    if (futuresClose > 0) return futuresClose;
+    return spotPrice; // fall back to underlying close when no futures data
+  }, [optionsData, activeSymbol, effectiveDate, spotPrice]);
+
+   (Move/reorder the spot and spotPrice useMemo declarations if needed so
+   spotPrice is defined before spot references it.)
+
+2. In artifacts/bharatscan/src/pages/OptionChain.tsx: it currently has no
+   equivalent underlying-close fallback at all. Add one, mirroring
+   Simulator's spotPrice pattern, using the `histories` array (already
+   imported/available via useData() — check the top of the file and add
+   `histories` to the destructured useData() call if it isn't already
+   there):
+
+  const spotPrice = useMemo(() => {
+    if (!activeSymbol || !effectiveDate || !histories.length) return 0;
+    const h = histories.find((h) => h.symbol === activeSymbol);
+    if (!h) return 0;
+    for (let i = h.bars.length - 1; i >= 0; i--) {
+      if (h.bars[i].date <= effectiveDate) return h.bars[i].close;
+    }
+    return 0;
+  }, [histories, activeSymbol, effectiveDate]);
+
+  const futuresPrice = useMemo(() => {
+    if (!optionsData || !activeSymbol || !effectiveDate) return 0;
+    const futuresClose = optionsData.futuresCloseByKey.get(`${activeSymbol}|${effectiveDate}`) ?? 0;
+    if (futuresClose > 0) return futuresClose;
+    return spotPrice;
+  }, [optionsData, activeSymbol, effectiveDate, spotPrice]);
+
+   (This replaces the existing futuresPrice block — keep the variable name
+   `futuresPrice` since `spot = futuresPrice` is already used below it.)
+
+3. Since spot will now realistically be > 0 whenever histories has data
+   for that symbol/date, the existing `spot <= 0` gate in the
+   enrichedChain useMemo can stay as-is — it'll now correctly only block
+   rendering when there's truly no price data anywhere (which is the
+   right behavior), not permanently.
+
+Test: reload the Option Chain tab for a symbol/date where histories has
+data (e.g. NIFTY on 2026-08-04) — the chain should now render with a
+real spot price instead of staying blank. In Options Simulator, confirm
+the ATM strike highlighting and payoff graph now reflect a real price
+instead of clustering around 0.

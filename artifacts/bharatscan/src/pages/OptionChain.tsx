@@ -391,7 +391,7 @@ function M({ v, cls = "" }: { v: string; cls?: string }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function OptionChainTab() {
-  const { optionsData, asOfOptionsDate, lotSizes: csvLotSizes } = useData();
+  const { optionsData, asOfOptionsDate, lotSizes: csvLotSizes, histories } = useData();
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [settings, setSettings] = useState<AllSettings>(loadSettings);
@@ -434,10 +434,26 @@ export default function OptionChainTab() {
     return visibleExpiries[0] ?? expiries[expiries.length - 1] ?? "";
   }, [selectedExpiry, visibleExpiries, expiries]);
 
+  // Underlying close — fallback when no futures data is available
+  const spotPrice = useMemo(() => {
+    if (!activeSymbol || !effectiveDate || !histories.length) return 0;
+    const h = histories.find((h) => h.symbol === activeSymbol);
+    if (!h) return 0;
+    for (let i = h.bars.length - 1; i >= 0; i--) {
+      if (h.bars[i].date <= effectiveDate) return h.bars[i].close;
+    }
+    return 0;
+  }, [histories, activeSymbol, effectiveDate]);
+
+  // Futures price — primary reference for ATM / Greeks;
+  // falls back to underlying close when futuresCloseByKey is empty
+  // (the DB auto-load path never populates it).
   const futuresPrice = useMemo(() => {
     if (!optionsData || !activeSymbol || !effectiveDate) return 0;
-    return optionsData.futuresCloseByKey.get(`${activeSymbol}|${effectiveDate}`) ?? 0;
-  }, [optionsData, activeSymbol, effectiveDate]);
+    const futuresClose = optionsData.futuresCloseByKey.get(`${activeSymbol}|${effectiveDate}`) ?? 0;
+    if (futuresClose > 0) return futuresClose;
+    return spotPrice;
+  }, [optionsData, activeSymbol, effectiveDate, spotPrice]);
 
   const spot = futuresPrice;
 

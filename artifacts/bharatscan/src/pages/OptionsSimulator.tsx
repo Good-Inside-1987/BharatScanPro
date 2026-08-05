@@ -731,14 +731,7 @@ export default function OptionsSimulator() {
     if (latestDate && !simDate) setSimDate(latestDate);
   }, [latestDate]);
 
-  // Futures price (front-month) — used as the primary reference for ATM / payoff
-  const spot = useMemo(() => {
-    if (!optionsData || !activeSymbol || !effectiveDate) return 0;
-    const key = `${activeSymbol}|${effectiveDate}`;
-    return optionsData.futuresCloseByKey.get(key) ?? 0;
-  }, [optionsData, activeSymbol, effectiveDate]);
-
-  // Spot (underlying) price — from equity bhavcopy, only available for stocks
+  // Spot (underlying) price — from equity bhavcopy / DB histories
   const spotPrice = useMemo(() => {
     if (!activeSymbol || !effectiveDate || !histories.length) return 0;
     const h = histories.find((h) => h.symbol === activeSymbol);
@@ -749,6 +742,17 @@ export default function OptionsSimulator() {
     }
     return 0;
   }, [activeSymbol, effectiveDate, histories]);
+
+  // Futures price (front-month) — primary reference for ATM / payoff;
+  // falls back to underlying close when no futures data is available
+  // (the DB auto-load path never populates futuresCloseByKey).
+  const spot = useMemo(() => {
+    if (!optionsData || !activeSymbol || !effectiveDate) return 0;
+    const key = `${activeSymbol}|${effectiveDate}`;
+    const futuresClose = optionsData.futuresCloseByKey.get(key) ?? 0;
+    if (futuresClose > 0) return futuresClose;
+    return spotPrice; // fall back to underlying close when no futures data
+  }, [optionsData, activeSymbol, effectiveDate, spotPrice]);
 
   // Build options chain for selected symbol + expiry + date
   const chain = useMemo(() => {
