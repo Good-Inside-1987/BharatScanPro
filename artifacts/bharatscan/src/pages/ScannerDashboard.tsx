@@ -1008,7 +1008,7 @@ export default function ScannerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
 
       {/* Dashboard tabs */}
       {dashboards.length > 0 && (

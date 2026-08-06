@@ -343,7 +343,7 @@ function OptionsAnalysisTab() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       {/* No data */}
       {!hasData && (
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-6">

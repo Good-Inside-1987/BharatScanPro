@@ -177,7 +177,7 @@ export default function SavedScanPage() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       <main className="container py-2 space-y-2">
         {/* Page title bar */}
         <div className="flex items-center justify-between gap-3">

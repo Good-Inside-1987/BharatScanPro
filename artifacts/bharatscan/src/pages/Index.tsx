@@ -681,7 +681,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       <main className="container py-1.5 space-y-2">
         {/* Filters */}
         <Card className="py-3 px-8 shadow-card">

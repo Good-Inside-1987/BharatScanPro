@@ -1101,7 +1101,7 @@ export default function StrategiesBacktest() {
     : { entry: "Short Conditions", exit: "Cover Conditions" };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       <main className="container py-2 space-y-2">
 
         {/* ─── Direction + Global Controls ─── */}

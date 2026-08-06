@@ -970,7 +970,7 @@ export default function Home() {
   const hasData = histories.length > 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       {/* No data state */}
       {!hasData && !loading && (
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-6">

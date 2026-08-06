@@ -384,7 +384,7 @@ export default function Alerts() {
   const todayCount   = history.filter(h => isToday(h.triggered_at)).length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       <main className="container py-2 space-y-3">
         {/* Page title bar */}
         <div className="flex items-center justify-between">

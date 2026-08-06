@@ -474,7 +474,7 @@ export default function StockIntraday() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       <main className="container space-y-3 py-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
