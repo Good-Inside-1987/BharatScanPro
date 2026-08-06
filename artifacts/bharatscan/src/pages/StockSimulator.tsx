@@ -1259,8 +1259,17 @@ export default function StockSimulator() {
                   <table className="w-full text-[10px] border-collapse">
                     <thead className="sticky top-0 bg-[#0d1117] z-10">
                       <tr className="border-b border-border/50">
-                        {["Exit Date", "Symbol", "B/S", "Qty", "Entry", "Exit", "P&L", ""].map(h => (
-                          <th key={h} className="px-2 py-1.5 text-left text-[9px] uppercase tracking-wide text-muted-foreground/60 font-semibold whitespace-nowrap first:pl-3">{h}</th>
+                        {[
+                          { label: "Exit Date",  cls: "text-left pl-3"   },
+                          { label: "Symbol",     cls: "text-left"        },
+                          { label: "B/S",        cls: "text-center"      },
+                          { label: "Qty",        cls: "text-right"       },
+                          { label: "Entry",      cls: "text-right"       },
+                          { label: "Exit",       cls: "text-right"       },
+                          { label: "P&L",        cls: "text-right"       },
+                          { label: "",           cls: "text-center"      },
+                        ].map(({ label, cls }) => (
+                          <th key={label} className={`px-2 py-1.5 text-[9px] uppercase tracking-wide text-muted-foreground/60 font-semibold whitespace-nowrap ${cls}`}>{label}</th>
                         ))}
                       </tr>
                     </thead>
