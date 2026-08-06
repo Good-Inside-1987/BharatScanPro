@@ -1,44 +1,54 @@
 # BharatScan
 
-A stock screener and backtesting tool for Indian markets (NSE).
+Indian stock market scanning and analysis platform. Scan, filter, and analyse NSE equities with real-time data via a Fyers broker connection.
 
 ## Stack
 
-- **Monorepo**: pnpm workspaces
-- **Frontend**: React 19, Vite 7, TypeScript, Tailwind CSS v4, TanStack Query
-- **Backend**: Node.js 22 (required — uses `node:sqlite`), Express 4
-- **Database**: `node:sqlite` (built-in Node.js SQLite, no native deps)
-- **Python sidecar**: `fyers_ws_bridge.py` for live Fyers broker WebSocket data
+- **Frontend** — React 19 + Vite, Tailwind CSS v4, Wouter routing (`artifacts/bharatscan/`)
+- **Backend** — Node.js + Express, `node:sqlite` (requires Node 22+), `tsx` watch (`server/`)
+- **Broker** — Fyers API (configured at runtime via the app's Settings page)
+- **Package manager** — pnpm workspaces
 
-## Running in Development
+## How to run
 
 Two workflows run in parallel:
 
 | Workflow | Command | Port |
 |---|---|---|
-| Backend API server | `pnpm --filter @workspace/server run dev` | 3001 |
 | Frontend | `PORT=5000 pnpm --filter @workspace/bharatscan run dev` | 5000 |
+| Backend API server | `pnpm --filter @workspace/server run dev` | 3001 |
 
-The frontend (port 5000) is what the user sees. It proxies `/api/*` requests to the backend on port 3001.
+The frontend proxies `/api/*` to the backend on port 3001.
 
-The Replit runtime is configured to use Node.js 22 because the backend uses the built-in `node:sqlite` module. The imported project was verified with both workflows running: the backend health endpoint responds on port 3001 and the frontend responds on port 5000.
+## Environment variables
 
-## Environment Variables
+Set in Replit's shared environment:
 
-| Variable | Required | Purpose |
-|---|---|---|
-| `API_KEY` | Optional | Password-protects the app. If unset, login is open. |
-| `BROKER_ENCRYPTION_KEY` | Optional | Encrypts stored broker credentials. If unset, broker auth will fail. |
-| `SERVER_PORT` | Optional | Backend port (default: 3001) |
-| `DB_DIR` | Optional | SQLite database directory (default: `./data`) |
+| Key | Purpose |
+|---|---|
+| `SERVER_PORT` | Backend port (default 3001) |
+| `NODE_ENV` | `development` / `production` |
+| `DB_DIR` | SQLite database directory (default `./data`) |
+| `PORT` | Frontend dev server port (default 5000) |
+| `BASE_PATH` | URL base path (default `/`) |
 
-## Key Notes
+Secrets (set via Replit Secrets):
 
-- **Node.js 22+ is required** — `node:sqlite` is a Node 22.5+ built-in. The project uses `nodejs-22` module.
-- **Python**: `fyers-apiv3` must be installed (`pip install fyers-apiv3`) for live broker feeds.
-- Broker connections (Fyers/Angel One) are needed for live data and options chains. Without a connected broker, market data syncs are skipped automatically.
-- On first run the server bootstraps ~2981 NSE symbols and the 2026 holiday calendar automatically.
+| Key | Purpose |
+|---|---|
+| `SESSION_SECRET` | Express session signing key ✅ set |
+| `API_KEY` | Optional — server auth key (skipped if unset) |
+| `BROKER_ENCRYPTION_KEY` | 32-char key for encrypting stored Fyers tokens |
 
-## User Preferences
+## Node.js version
 
-_No preferences recorded yet._
+Requires **Node 22+** — `node:sqlite` (used by the backend) is not available in Node 20.
+
+## Broker setup
+
+Connect Fyers by going to **Settings** inside the app. Credentials are stored encrypted in the local SQLite database.
+
+## User preferences
+
+- Keep the project's monorepo structure (artifacts/bharatscan, server, lib)
+- Do not restructure or migrate to a different stack
