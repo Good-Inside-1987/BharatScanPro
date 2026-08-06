@@ -1163,13 +1163,18 @@ export default function OptionsSimulator() {
   // Stats
   const stats = useMemo(() => {
     if (!legs.length || !payoffData.length || !spot) return null;
+    // Only legs whose entry timestamp is ≤ current sim time are active.
+    // All payoff/max-profit/breakeven/margin calculations must use activeLegs so
+    // that time-traveling backward correctly excludes legs added in the "future".
+    const activeLegs = legs.filter(l => isLegActive(l.addedDate ?? "", l.addedTime ?? "00:00", effectiveDate, simTime));
+    if (!activeLegs.length) return null;
     const pnls = payoffData.map((d) => d.pnl);
     // Wide sweep: spot=1 (captures long-PE near-zero max) + 5% to 500% of spot
     const wideSteps = 400;
     const widePnls = [
-      payoffAtExpiry(legs, 1, lotSize), // spot ≈ 0 — true max for long PE
+      payoffAtExpiry(activeLegs, 1, lotSize), // spot ≈ 0 — true max for long PE
       ...Array.from({ length: wideSteps + 1 }, (_, i) =>
-        payoffAtExpiry(legs, spot * 0.05 + spot * 4.95 * (i / wideSteps), lotSize)
+        payoffAtExpiry(activeLegs, spot * 0.05 + spot * 4.95 * (i / wideSteps), lotSize)
       ),
     ];
     const maxProfit = Math.max(...widePnls);
@@ -1178,16 +1183,15 @@ export default function OptionsSimulator() {
     // If payoff is still RISING between 8× and 10× spot → net long CE exposure → profit is unlimited
     // If payoff is still FALLING between 8× and 10× spot → net short CE exposure → loss is unlimited
     // A long/short PE flattens out at high spot (payoff = ±premium), so slope ≈ 0 → not unlimited
-    const payoffAt8x  = payoffAtExpiry(legs, spot * 8,  lotSize);
-    const payoffAt10x = payoffAtExpiry(legs, spot * 10, lotSize);
+    const payoffAt8x  = payoffAtExpiry(activeLegs, spot * 8,  lotSize);
+    const payoffAt10x = payoffAtExpiry(activeLegs, spot * 10, lotSize);
     const slopeHigh = payoffAt10x - payoffAt8x;
     const maxProfitUnlimited = slopeHigh > 1;   // still rising  → long CE net exposure
     const maxLossUnlimited   = slopeHigh < -1;  // still falling → short CE net exposure
     // POP uses chart-range pnls (realistic window)
     const pop = +(pnls.filter((p) => p > 0).length / pnls.length * 100).toFixed(0);
-    const bvs = computeBreakevens(legs, lotSize, spot);
-    // MtM P&L: only active legs contribute to the current P&L shown in the stats bar
-    const activeLegs = legs.filter(l => isLegActive(l.addedDate ?? "", l.addedTime ?? "00:00", effectiveDate, simTime));
+    const bvs = computeBreakevens(activeLegs, lotSize, spot);
+    // MtM P&L: active legs already defined above
     const currentPnl = activeLegs.reduce((total, leg) => {
       const mktPrice = getLegLTP(leg);
       if (mktPrice <= 0) return total;
