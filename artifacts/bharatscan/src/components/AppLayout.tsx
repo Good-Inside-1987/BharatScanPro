@@ -11,8 +11,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       <Sidebar />
       <div className="flex-1 min-w-0 ml-14 flex flex-col overflow-hidden">
         <GlobalHeader />
-        <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
-          <div className="max-w-[1500px] w-full mx-auto flex-1 flex flex-col">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="max-w-[1500px] w-full mx-auto">
             {children}
           </div>
         </div>
