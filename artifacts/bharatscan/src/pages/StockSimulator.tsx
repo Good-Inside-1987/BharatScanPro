@@ -287,7 +287,7 @@ export default function StockSimulator() {
   const effectiveDate = simDate || latestDate || "";
 
   // ── Universe filter ───────────────────────────────────────────────────────
-  const [universeId,   setUniverseId]   = useState("nse-cash");
+  const [universeId,   setUniverseId]   = useState("nse-all");
   const [universeOpen, setUniverseOpen] = useState(false);
   const universeRef = useRef<HTMLDivElement>(null);
 
@@ -338,11 +338,11 @@ export default function StockSimulator() {
     return () => document.removeEventListener("mousedown", handler);
   }, [showModeMenu]);
 
-  const isDirty = search !== "" || universeId !== "nse-cash" || simDate !== (latestDate ?? "") || simTime !== "09:15"
+  const isDirty = search !== "" || universeId !== "nse-all" || simDate !== (latestDate ?? "") || simTime !== "09:15"
     || qtyMode !== "qty" || globalQty !== 1 || globalAmount !== 50000;
   function handleReset() {
     setSearch("");
-    setUniverseId("nse-cash");
+    setUniverseId("nse-all");
     setSimDate(latestDate ?? "");
     setSimTime("09:15");
     setQtyMode("qty");
