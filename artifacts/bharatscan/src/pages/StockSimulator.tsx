@@ -1260,7 +1260,8 @@ export default function StockSimulator() {
                     <thead className="sticky top-0 bg-[#0d1117] z-10">
                       <tr className="border-b border-border/50">
                         {[
-                          { label: "Exit Date",  cls: "text-left pl-3"   },
+                          { label: "Entry Date", cls: "text-left pl-3"   },
+                          { label: "Exit Date",  cls: "text-left"        },
                           { label: "Symbol",     cls: "text-left"        },
                           { label: "B/S",        cls: "text-center"      },
                           { label: "Qty",        cls: "text-right"       },
@@ -1277,8 +1278,12 @@ export default function StockSimulator() {
                       {simHistory.map((t) => (
                         <tr key={t.id} className="border-b border-border/20 hover:bg-muted/10 transition-colors">
                           <td className="pl-3 pr-2 py-1.5 whitespace-nowrap">
+                            <div className="text-muted-foreground font-medium">{t.entry_date}</div>
+                            <div className="text-[9px] text-muted-foreground/50">{t.entry_time}</div>
+                          </td>
+                          <td className="px-2 py-1.5 whitespace-nowrap">
                             <div className="text-muted-foreground font-medium">{t.exit_date}</div>
-                            <div className="text-[9px] text-muted-foreground/50">{t.entry_time}→{t.exit_time}</div>
+                            <div className="text-[9px] text-muted-foreground/50">{t.exit_time}</div>
                           </td>
                           <td className="px-2 py-1.5 font-semibold text-foreground">{t.symbol}</td>
                           <td className="px-2 py-1.5 text-center">
@@ -1307,7 +1312,7 @@ export default function StockSimulator() {
                     </tbody>
                     <tfoot>
                       <tr className="border-t border-border/50 bg-[#080d11]">
-                        <td colSpan={6} className="pl-3 pr-2 py-1.5 text-xs font-semibold text-muted-foreground">Total Realized P&amp;L</td>
+                        <td colSpan={7} className="pl-3 pr-2 py-1.5 text-xs font-semibold text-muted-foreground">Total Realized P&amp;L</td>
                         <td className={`px-2 py-1.5 text-right text-xs font-bold tabular-nums ${
                           simHistory.reduce((s, t) => s + t.realized_pnl, 0) >= 0 ? "text-emerald-400" : "text-red-400"
                         }`}>
