@@ -623,7 +623,7 @@ export default function StockSimulator() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-[calc(100vh-100px)] overflow-hidden bg-background">
+    <div className="flex flex-col h-full overflow-hidden bg-background">
 
       {/* ── Time nav bar ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-center gap-0 border-b border-border bg-[#0d1117] px-2 py-0.5 shrink-0 flex-wrap">

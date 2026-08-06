@@ -714,7 +714,7 @@ export default function OptionChainTab() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-[calc(100vh-100px)] overflow-hidden bg-background">
+    <div className="flex flex-col h-full overflow-hidden bg-background">
 
       {/* Settings panel overlay */}
       {settingsOpen && (

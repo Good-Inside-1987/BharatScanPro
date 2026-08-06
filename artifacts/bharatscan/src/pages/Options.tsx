@@ -513,7 +513,7 @@ export default function OptionsPage() {
   const [pageTab, setPageTab] = useState<"chain" | "simulator" | "stock-simulator" | "analysis" | "stock-intraday">("simulator");
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col h-screen overflow-hidden bg-background">
       {/* Page-level tab bar */}
       <div className="flex items-center border-b border-border bg-card px-4 shrink-0">
         {[
@@ -543,12 +543,14 @@ export default function OptionsPage() {
         ))}
       </div>
 
-      {/* Tab content */}
-      {pageTab === "chain"           && <OptionChainTab />}
-      {pageTab === "analysis"        && <OptionsAnalysisTab />}
-      {pageTab === "stock-intraday"  && <StockIntraday />}
-      {pageTab === "simulator"       && <OptionsSimulator />}
-      {pageTab === "stock-simulator" && <StockSimulator />}
+      {/* Tab content — flex-1 + overflow-hidden keeps each simulator self-contained */}
+      <div className="flex-1 overflow-hidden">
+        {pageTab === "chain"           && <OptionChainTab />}
+        {pageTab === "analysis"        && <OptionsAnalysisTab />}
+        {pageTab === "stock-intraday"  && <StockIntraday />}
+        {pageTab === "simulator"       && <OptionsSimulator />}
+        {pageTab === "stock-simulator" && <StockSimulator />}
+      </div>
     </div>
   );
 }
