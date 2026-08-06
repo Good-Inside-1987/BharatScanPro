@@ -1,9 +1,10 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import {
-  Plus, Minus, Trash2, Database, Clock, ChevronDown,
+  Plus, Minus, Trash2, Database, Clock, ChevronDown, History,
   ChevronLeft, ChevronRight, Search, TrendingUp, Layers, X, RotateCcw, Copy, LogOut, Check,
 } from "lucide-react";
 import { toast } from "sonner";
+import { apiListSimTrades, apiRecordSimTrade, apiDeleteSimTrade, type ApiSimTrade } from "@/lib/api";
 import { useData } from "@/context/DataContext";
 import type { SymbolHistory } from "@/lib/csv";
 import {
@@ -315,6 +316,10 @@ export default function StockSimulator() {
   const [lastCopied,    setLastCopied]    = useState<string | null>(null);
   const [legs,          setLegs]          = useState<StockLeg[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [sqOffAction, setSqOffAction] = useState<{ id: string; qty: number } | null>(null);
+  const [rightTab, setRightTab] = useState<"positions" | "history">("positions");
+  const [simHistory, setSimHistory] = useState<ApiSimTrade[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const [focusSymbol,   setFocusSymbol]   = useState<string>("");
   const [hoveredSymbol, setHoveredSymbol] = useState<string | null>(null);
@@ -439,8 +444,60 @@ export default function StockSimulator() {
   const updateLegTgt = useCallback((id: string, val: number | undefined) =>
     setLegs(prev => prev.map(l => l.id === id ? { ...l, tgt: val } : l)), []);
 
-  // Square off: record the trade at LTP, then remove the leg
-  const squareOff = useCallback((id: string) => removeLeg(id), [removeLeg]);
+  // ── Trade history ──────────────────────────────────────────────────────────
+  const fetchHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const trades = await apiListSimTrades("stock");
+      setSimHistory(trades);
+    } catch { /* silent */ }
+    finally { setHistoryLoading(false); }
+  }, []);
+
+  useEffect(() => { void fetchHistory(); }, [fetchHistory]);
+
+  const confirmSquareOff = useCallback(async (id: string, qtyToClose: number) => {
+    const leg = legs.find(l => l.id === id);
+    if (!leg) return;
+    const exitPrice = getPriceForSymbol(leg.symbol);
+    if (exitPrice <= 0) {
+      toast.error("No price available — cannot square off");
+      return;
+    }
+    const pnl = (leg.action === "BUY"
+      ? exitPrice - leg.entryPrice
+      : leg.entryPrice - exitPrice) * qtyToClose;
+    const exitDate = effectiveDate || new Date().toISOString().slice(0, 10);
+    const exitTime = simTime || "15:30";
+    try {
+      await apiRecordSimTrade({
+        simulator_type: "stock",
+        symbol: leg.symbol,
+        underlying: null, strike: null, option_type: null, expiry: null,
+        action: leg.action,
+        qty: qtyToClose,
+        lot_size: null,
+        entry_price: leg.entryPrice,
+        exit_price: exitPrice,
+        entry_date: leg.entryDate,
+        entry_time: leg.entryTime,
+        exit_date: exitDate,
+        exit_time: exitTime,
+        realized_pnl: pnl,
+        notes: null,
+      });
+      toast.success(`Squared off ${leg.symbol}: ${pnl >= 0 ? "+" : ""}₹${Math.round(Math.abs(pnl)).toLocaleString("en-IN")}`);
+      void fetchHistory();
+    } catch {
+      toast.error("Failed to save to trade history");
+    }
+    setLegs(prev => prev.flatMap(l => {
+      if (l.id !== id) return [l];
+      const remaining = l.qty - qtyToClose;
+      return remaining > 0 ? [{ ...l, qty: remaining }] : [];
+    }));
+    setSqOffAction(null);
+  }, [legs, getPriceForSymbol, effectiveDate, simTime, fetchHistory]);
 
   // Ref: true while user is actively typing in an SL or TGT input — pauses breach check
   const editingSlTgt = useRef(false);
@@ -882,9 +939,27 @@ export default function StockSimulator() {
           </div>
         </div>
 
-        {/* ── Right: Payoff chart + positions ──────────────────────────── */}
+        {/* ── Right: Positions / History ────────────────────────────────── */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {legs.length === 0 ? (
+          {/* Right panel tabs */}
+          <div className="flex items-center border-b border-border bg-[#0d1117] px-4 shrink-0">
+            {(["positions", "history"] as const).map((key) => {
+              const Icon = key === "positions" ? TrendingUp : History;
+              const label = key === "positions" ? "Positions" : "History";
+              return (
+                <button key={key} type="button" onClick={() => setRightTab(key)}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold border-b-2 -mb-px transition-colors ${
+                    rightTab === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}>
+                  <Icon className="h-3.5 w-3.5" />{label}
+                  {key === "history" && simHistory.length > 0 && (
+                    <span className="ml-0.5 text-[9px] px-1.5 rounded-full bg-primary/20 text-primary font-bold">{simHistory.length}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          {rightTab === "positions" && (legs.length === 0 ? (
             <div className="flex flex-col items-center justify-center flex-1 gap-3 text-center px-8">
               <div className="rounded-full bg-muted/20 p-5">
                 <TrendingUp className="h-9 w-9 text-muted-foreground/35" />
@@ -892,7 +967,6 @@ export default function StockSimulator() {
               <p className="text-sm font-semibold text-foreground">No positions added yet</p>
               <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
                 Hover any stock row and click <span className="font-bold text-blue-400">B</span> to buy or <span className="font-bold text-red-400">S</span> to short.
-                The P&amp;L payoff chart will appear here.
               </p>
             </div>
           ) : (
@@ -1123,9 +1197,33 @@ export default function StockSimulator() {
                               <X className="h-2.5 w-2.5" />
                             </button>
                           </div>
+                        ) : sqOffAction?.id === leg.id ? (
+                          <div className="flex items-center justify-center gap-0.5">
+                            <button type="button"
+                              onClick={() => setSqOffAction(a => a && { ...a, qty: Math.max(1, a.qty - 1) })}
+                              className="w-4 h-4 flex items-center justify-center rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500/35 transition-colors">
+                              <Minus className="h-2 w-2" />
+                            </button>
+                            <span className="tabular-nums font-bold text-amber-400 text-[11px] w-5 text-center">{sqOffAction.qty}</span>
+                            <button type="button"
+                              onClick={() => setSqOffAction(a => a && { ...a, qty: Math.min(leg.qty, a.qty + 1) })}
+                              className="w-4 h-4 flex items-center justify-center rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500/35 transition-colors">
+                              <Plus className="h-2 w-2" />
+                            </button>
+                            <button type="button" title="Confirm square off"
+                              onClick={() => void confirmSquareOff(leg.id, sqOffAction.qty)}
+                              className="w-4 h-4 flex items-center justify-center rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/35 transition-colors ml-0.5">
+                              <Check className="h-2.5 w-2.5" />
+                            </button>
+                            <button type="button" title="Cancel"
+                              onClick={() => setSqOffAction(null)}
+                              className="w-4 h-4 flex items-center justify-center rounded bg-muted/30 text-muted-foreground hover:text-foreground transition-colors">
+                              <X className="h-2.5 w-2.5" />
+                            </button>
+                          </div>
                         ) : (
                           <div className="flex items-center justify-center gap-1">
-                            <button type="button" onClick={() => squareOff(leg.id)}
+                            <button type="button" onClick={() => setSqOffAction({ id: leg.id, qty: leg.qty })}
                               title="Square off at LTP"
                               className="w-6 h-6 flex items-center justify-center rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500/40 transition-colors">
                               <LogOut className="h-3 w-3" />
@@ -1143,6 +1241,77 @@ export default function StockSimulator() {
                 </div>
               </div>
             </>
+          ))}
+          {rightTab === "history" && (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {historyLoading ? (
+                <div className="flex items-center justify-center flex-1 text-muted-foreground text-xs">Loading history…</div>
+              ) : simHistory.length === 0 ? (
+                <div className="flex flex-col items-center justify-center flex-1 gap-3 text-center px-8">
+                  <div className="rounded-full bg-muted/20 p-5">
+                    <History className="h-9 w-9 text-muted-foreground/35" />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">No trade history yet</p>
+                  <p className="text-xs text-muted-foreground max-w-xs">Square off a position to record it here.</p>
+                </div>
+              ) : (
+                <div className="overflow-y-auto flex-1">
+                  <table className="w-full text-[10px] border-collapse">
+                    <thead className="sticky top-0 bg-[#0d1117] z-10">
+                      <tr className="border-b border-border/50">
+                        {["Exit Date", "Symbol", "B/S", "Qty", "Entry", "Exit", "P&L", ""].map(h => (
+                          <th key={h} className="px-2 py-1.5 text-left text-[9px] uppercase tracking-wide text-muted-foreground/60 font-semibold whitespace-nowrap first:pl-3">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {simHistory.map((t) => (
+                        <tr key={t.id} className="border-b border-border/20 hover:bg-muted/10 transition-colors">
+                          <td className="pl-3 pr-2 py-1.5 whitespace-nowrap">
+                            <div className="text-muted-foreground font-medium">{t.exit_date}</div>
+                            <div className="text-[9px] text-muted-foreground/50">{t.entry_time}→{t.exit_time}</div>
+                          </td>
+                          <td className="px-2 py-1.5 font-semibold text-foreground">{t.symbol}</td>
+                          <td className="px-2 py-1.5 text-center">
+                            <span className={`px-1 py-0.5 rounded text-[9px] font-bold ${t.action === "BUY" ? "bg-blue-500/20 text-blue-400" : "bg-red-500/20 text-red-400"}`}>
+                              {t.action === "BUY" ? "B" : "S"}
+                            </span>
+                          </td>
+                          <td className="px-2 py-1.5 text-right tabular-nums text-foreground">{t.qty}</td>
+                          <td className="px-2 py-1.5 text-right tabular-nums text-muted-foreground">₹{t.entry_price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
+                          <td className="px-2 py-1.5 text-right tabular-nums text-muted-foreground">₹{t.exit_price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
+                          <td className={`px-2 py-1.5 text-right tabular-nums font-bold ${t.realized_pnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                            {t.realized_pnl >= 0 ? "+" : ""}₹{Math.round(Math.abs(t.realized_pnl)).toLocaleString("en-IN")}
+                          </td>
+                          <td className="px-2 py-1.5 text-center">
+                            <button type="button"
+                              onClick={async () => {
+                                try { await apiDeleteSimTrade(t.id); void fetchHistory(); }
+                                catch { toast.error("Failed to delete"); }
+                              }}
+                              className="p-0.5 rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+                              <Trash2 className="h-2.5 w-2.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-border/50 bg-[#080d11]">
+                        <td colSpan={6} className="pl-3 pr-2 py-1.5 text-xs font-semibold text-muted-foreground">Total Realized P&amp;L</td>
+                        <td className={`px-2 py-1.5 text-right text-xs font-bold tabular-nums ${
+                          simHistory.reduce((s, t) => s + t.realized_pnl, 0) >= 0 ? "text-emerald-400" : "text-red-400"
+                        }`}>
+                          {simHistory.reduce((s, t) => s + t.realized_pnl, 0) >= 0 ? "+" : ""}
+                          ₹{Math.round(Math.abs(simHistory.reduce((s, t) => s + t.realized_pnl, 0))).toLocaleString("en-IN")}
+                        </td>
+                        <td />
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

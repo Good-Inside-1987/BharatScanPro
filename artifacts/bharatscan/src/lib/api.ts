@@ -877,3 +877,36 @@ export const apiImportPaperAccounts = (body: ImportPaperAccountsPayload) =>
     method: "POST",
     body: JSON.stringify(body),
   });
+
+// ── Simulator Trade History ───────────────────────────────────────────────────
+
+export interface ApiSimTrade {
+  id: string;
+  simulator_type: "stock" | "options";
+  symbol: string;
+  underlying: string | null;
+  strike: number | null;
+  option_type: "CE" | "PE" | null;
+  expiry: string | null;
+  action: "BUY" | "SELL";
+  qty: number;
+  lot_size: number | null;
+  entry_price: number;
+  exit_price: number;
+  entry_date: string;
+  entry_time: string;
+  exit_date: string;
+  exit_time: string;
+  realized_pnl: number;
+  notes: string | null;
+  created_at: string;
+}
+
+export const apiListSimTrades = (type?: "stock" | "options") =>
+  request<ApiSimTrade[]>(`/sim-trades${type ? `?type=${type}` : ""}`);
+
+export const apiRecordSimTrade = (body: Omit<ApiSimTrade, "id" | "created_at">) =>
+  request<ApiSimTrade>("/sim-trades", { method: "POST", body: JSON.stringify(body) });
+
+export const apiDeleteSimTrade = (id: string) =>
+  request<void>(`/sim-trades/${id}`, { method: "DELETE" });

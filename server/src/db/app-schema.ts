@@ -189,6 +189,29 @@ export function initAppDb(db: DatabaseSync): void {
       updated_at TEXT NOT NULL
     );
 
+    -- ── Simulator Trade History ───────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS sim_trades (
+      id             TEXT PRIMARY KEY,
+      simulator_type TEXT NOT NULL,
+      symbol         TEXT NOT NULL,
+      underlying     TEXT,
+      strike         REAL,
+      option_type    TEXT,
+      expiry         TEXT,
+      action         TEXT NOT NULL,
+      qty            REAL NOT NULL,
+      lot_size       REAL,
+      entry_price    REAL NOT NULL,
+      exit_price     REAL NOT NULL,
+      entry_date     TEXT NOT NULL,
+      entry_time     TEXT NOT NULL,
+      exit_date      TEXT NOT NULL,
+      exit_time      TEXT NOT NULL,
+      realized_pnl   REAL NOT NULL,
+      notes          TEXT,
+      created_at     TEXT NOT NULL
+    );
+
     -- ── Broker Connections ────────────────────────────────────────────
     CREATE TABLE IF NOT EXISTS broker_connections (
       id                 TEXT PRIMARY KEY,
