@@ -513,7 +513,7 @@ export default function OptionsPage() {
   const [pageTab, setPageTab] = useState<"chain" | "simulator" | "stock-simulator" | "analysis" | "stock-intraday">("simulator");
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-background">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-background">
       {/* Page-level tab bar */}
       <div className="flex items-center border-b border-border bg-card px-4 shrink-0">
         {[
